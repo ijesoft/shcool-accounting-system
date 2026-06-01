@@ -1,5 +1,6 @@
 import { journalEntryRepository } from "@/repositories/journal-entry.repository"
 import { postingEngine } from "@/lib/accounting/posting-engine"
+import { approvalService } from "@/services/approval.service"
 import type { CreateJournalEntryInput, UpdateJournalEntryInput } from "@/lib/validators/journal-entry"
 
 export const journalEntryService = {
@@ -51,7 +52,7 @@ export const journalEntryService = {
   async post(entitySchema: string, id: string, userId: string) {
     const entry = await journalEntryRepository.findById(entitySchema, id)
     if (!entry) throw { status: 404, code: "ERR_NOT_FOUND", message: "Journal entry not found" }
-    if (entry.status !== "draft") throw { status: 400, code: "ERR_ENTRY_ALREADY_POSTED", message: "Entry already posted or void" }
+    if (entry.status !== "approved") throw { status: 400, code: "ERR_ENTRY_NOT_APPROVED", message: "Entry must be approved before posting" }
 
     const result = await postingEngine.post(
       entitySchema, id, userId, entry.entry_date.toISOString().split('T')[0], entry.lines
@@ -73,6 +74,33 @@ export const journalEntryService = {
       throw { status: 400, code: result.errors[0].code, message: result.errors.map(e => e.message).join("; ") }
     }
 
+    return journalEntryRepository.findById(entitySchema, id)
+  },
+
+  async submitForApproval(entitySchema: string, id: string, userId: string) {
+    const entry = await journalEntryRepository.findById(entitySchema, id)
+    if (!entry) throw { status: 404, code: "ERR_NOT_FOUND", message: "Journal entry not found" }
+    if (entry.status !== "draft") throw { status: 400, code: "ERR_INVALID_STATUS", message: "Only draft entries can be submitted" }
+
+    await approvalService.submitForApproval(entitySchema, id, userId)
+    return journalEntryRepository.findById(entitySchema, id)
+  },
+
+  async approve(entitySchema: string, id: string, userId: string, comments?: string) {
+    const entry = await journalEntryRepository.findById(entitySchema, id)
+    if (!entry) throw { status: 404, message: "Journal entry not found" }
+    if (entry.status !== "pending_approval") throw { status: 400, message: "Entry not pending approval" }
+
+    await approvalService.approve(entitySchema, id, userId, comments)
+    return journalEntryRepository.findById(entitySchema, id)
+  },
+
+  async reject(entitySchema: string, id: string, userId: string, reason: string) {
+    const entry = await journalEntryRepository.findById(entitySchema, id)
+    if (!entry) throw { status: 404, message: "Journal entry not found" }
+    if (entry.status !== "pending_approval") throw { status: 400, message: "Entry not pending approval" }
+
+    await approvalService.reject(entitySchema, id, userId, reason)
     return journalEntryRepository.findById(entitySchema, id)
   },
 }
