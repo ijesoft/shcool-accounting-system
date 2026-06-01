@@ -88,33 +88,31 @@ export const postingEngine = {
 
     // Post within a transaction
     try {
-      await prisma.$executeRawUnsafe(`BEGIN`)
-
-      // Update journal entry status
-      await prisma.$queryRawUnsafe(
-        `UPDATE "${entitySchema}".journal_entry 
-         SET status = 'posted', posted_at = NOW(), posted_by = $1, fiscal_period_id = $2, updated_at = NOW()
-         WHERE id = $3`,
-        userId, fiscalPeriodId, entryId
-      )
-
-      // Update GL running balances
-      for (const line of lines) {
-        const accounts = await prisma.$queryRawUnsafe<any[]>(
-          `SELECT normal_balance FROM "${entitySchema}".account WHERE id = $1`,
-          line.accountId
+      await prisma.$transaction(async (tx) => {
+        // Update journal entry status
+        await tx.$queryRawUnsafe(
+          `UPDATE "${entitySchema}".journal_entry 
+           SET status = 'posted', posted_at = NOW(), posted_by = $1, fiscal_period_id = $2, updated_at = NOW()
+           WHERE id = $3`,
+          userId, fiscalPeriodId, entryId
         )
-        if (accounts[0]) {
-          await ledgerRepository.updateRunningBalance(
-            entitySchema, line.accountId, fiscalPeriodId, line.debit, line.credit, accounts[0].normal_balance
-          )
-        }
-      }
 
-      await prisma.$executeRawUnsafe(`COMMIT`)
+        // Update GL running balances
+        for (const line of lines) {
+          const accounts = await tx.$queryRawUnsafe<any[]>(
+            `SELECT normal_balance FROM "${entitySchema}".account WHERE id = $1`,
+            line.accountId
+          )
+          if (accounts[0]) {
+            await ledgerRepository.updateRunningBalance(
+              entitySchema, line.accountId, fiscalPeriodId, line.debit, line.credit, accounts[0].normal_balance
+            )
+          }
+        }
+      })
+
       return { success: true, errors: [] }
     } catch (error) {
-      await prisma.$executeRawUnsafe(`ROLLBACK`)
       return { success: false, errors: [{ code: "ERR_POSTING_FAILED", message: error instanceof Error ? error.message : "Posting failed" }] }
     }
   },
