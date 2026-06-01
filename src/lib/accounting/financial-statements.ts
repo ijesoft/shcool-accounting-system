@@ -3,9 +3,23 @@ import type { CashFlowEntry } from "@/types/accounting"
 
 export const financialStatementEngine = {
   async trialBalance(entitySchema: string, fiscalPeriodId?: string) {
-    const whereClause = fiscalPeriodId
-      ? `WHERE je.status = 'posted' AND je.fiscal_period_id = '${fiscalPeriodId}'`
-      : `WHERE je.status = 'posted'`
+    if (fiscalPeriodId) {
+      const results = await prisma.$queryRawUnsafe<any[]>(
+        `SELECT a.account_code, a.account_name, a.account_type, a.normal_balance,
+                COALESCE(SUM(jel.debit), 0) as total_debits,
+                COALESCE(SUM(jel.credit), 0) as total_credits
+         FROM "${entitySchema}".account a
+         LEFT JOIN "${entitySchema}".journal_entry_line jel ON jel.account_id = a.id
+         LEFT JOIN "${entitySchema}".journal_entry je ON je.id = jel.journal_entry_id
+           AND je.status = 'posted' AND je.fiscal_period_id = $1
+         GROUP BY a.id, a.account_code, a.account_name, a.account_type, a.normal_balance
+         ORDER BY a.account_code`,
+        fiscalPeriodId
+      )
+      const totalDebits = results.reduce((s: number, r: any) => s + Number(r.total_debits), 0)
+      const totalCredits = results.reduce((s: number, r: any) => s + Number(r.total_credits), 0)
+      return { accounts: results, totalDebits, totalCredits, balanced: Math.abs(totalDebits - totalCredits) < 0.01 }
+    }
 
     const results = await prisma.$queryRawUnsafe<any[]>(
       `SELECT a.account_code, a.account_name, a.account_type, a.normal_balance,
@@ -13,14 +27,13 @@ export const financialStatementEngine = {
               COALESCE(SUM(jel.credit), 0) as total_credits
        FROM "${entitySchema}".account a
        LEFT JOIN "${entitySchema}".journal_entry_line jel ON jel.account_id = a.id
-       LEFT JOIN "${entitySchema}".journal_entry je ON je.id = jel.journal_entry_id ${whereClause}
+       LEFT JOIN "${entitySchema}".journal_entry je ON je.id = jel.journal_entry_id
+         AND je.status = 'posted'
        GROUP BY a.id, a.account_code, a.account_name, a.account_type, a.normal_balance
        ORDER BY a.account_code`
     )
-
     const totalDebits = results.reduce((s: number, r: any) => s + Number(r.total_debits), 0)
     const totalCredits = results.reduce((s: number, r: any) => s + Number(r.total_credits), 0)
-
     return { accounts: results, totalDebits, totalCredits, balanced: Math.abs(totalDebits - totalCredits) < 0.01 }
   },
 
