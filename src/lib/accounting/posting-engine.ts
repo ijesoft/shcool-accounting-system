@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db"
 import { ledgerRepository } from "@/repositories/ledger.repository"
+import { periodControl } from "./period-control"
 
 export interface PostingError {
   code: string
@@ -73,18 +74,12 @@ export const postingEngine = {
     }
 
     const entryDate = new Date(entryDateStr)
-    const fiscalPeriodId = await getCurrentFiscalPeriod(entitySchema, entryDate)
-    if (!fiscalPeriodId) {
-      return { success: false, errors: [{ code: "ERR_PERIOD_NOT_FOUND", message: "No open fiscal period for this date" }] }
+    const periodCheck = await periodControl.canPostToPeriod(entitySchema, entryDate)
+    if (!periodCheck.allowed) {
+      return { success: false, errors: [{ code: periodCheck.error!.code, message: periodCheck.error!.message }] }
     }
 
-    const periodCheck = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT is_closed FROM public.fiscal_period WHERE id = $1`,
-      fiscalPeriodId
-    )
-    if (periodCheck[0]?.is_closed) {
-      return { success: false, errors: [{ code: "ERR_PERIOD_CLOSED", message: "Fiscal period is closed" }] }
-    }
+    const fiscalPeriodId = await getCurrentFiscalPeriod(entitySchema, entryDate)
 
     // Post within a transaction
     try {
