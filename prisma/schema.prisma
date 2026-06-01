@@ -1,0 +1,138 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["public", "audit"]
+}
+
+// === PUBLIC SCHEMA ===
+
+model Entity {
+  id               String   @id @default(uuid()) @db.Uuid
+  code             String   @unique @db.VarChar(20)
+  name             String   @db.VarChar(200)
+  tin              String?  @db.VarChar(20)
+  address          String?  @db.Text
+  fiscalYearStart  DateTime @map("fiscal_year_start") @db.Date
+  status           String   @default("active") @db.VarChar(20)
+  schemaName       String   @unique @map("schema_name") @db.VarChar(63)
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  fiscalYears FiscalYear[]
+  users       User[]
+
+  @@schema("public")
+  @@map("entity")
+}
+
+model FiscalYear {
+  id        String   @id @default(uuid()) @db.Uuid
+  entityId  String   @map("entity_id") @db.Uuid
+  label     String   @db.VarChar(20)
+  startDate DateTime @map("start_date") @db.Date
+  endDate   DateTime @map("end_date") @db.Date
+  isClosed  Boolean  @default(false) @map("is_closed")
+
+  entity  Entity        @relation(fields: [entityId], references: [id])
+  periods FiscalPeriod[]
+
+  @@unique([entityId, label])
+  @@schema("public")
+  @@map("fiscal_year")
+}
+
+model FiscalPeriod {
+  id            String   @id @default(uuid()) @db.Uuid
+  fiscalYearId  String   @map("fiscal_year_id") @db.Uuid
+  periodNumber  Int      @map("period_number")
+  startDate     DateTime @map("start_date") @db.Date
+  endDate       DateTime @map("end_date") @db.Date
+  isClosed      Boolean  @default(false) @map("is_closed")
+
+  fiscalYear FiscalYear @relation(fields: [fiscalYearId], references: [id])
+
+  @@unique([fiscalYearId, periodNumber])
+  @@schema("public")
+  @@map("fiscal_period")
+}
+
+model Role {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @unique @db.VarChar(50)
+  description String?  @db.Text
+  isSystem    Boolean  @default(false) @map("is_system")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  permissions RolePermission[]
+  users       User[]
+
+  @@schema("public")
+  @@map("role")
+}
+
+model Permission {
+  id       String @id @default(uuid()) @db.Uuid
+  resource String @db.VarChar(50)
+  action   String @db.VarChar(20)
+
+  roles RolePermission[]
+
+  @@unique([resource, action])
+  @@schema("public")
+  @@map("permission")
+}
+
+model RolePermission {
+  roleId       String @map("role_id") @db.Uuid
+  permissionId String @map("permission_id") @db.Uuid
+
+  role       Role       @relation(fields: [roleId], references: [id])
+  permission Permission @relation(fields: [permissionId], references: [id])
+
+  @@id([roleId, permissionId])
+  @@schema("public")
+  @@map("role_permission")
+}
+
+model User {
+  id           String    @id @default(uuid()) @db.Uuid
+  email        String    @unique @db.VarChar(200)
+  passwordHash String    @map("password_hash") @db.VarChar(255)
+  fullName     String    @map("full_name") @db.VarChar(200)
+  roleId       String    @map("role_id") @db.Uuid
+  entityId     String?   @map("entity_id") @db.Uuid
+  isActive     Boolean   @default(true) @map("is_active")
+  lastLogin    DateTime? @map("last_login")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  role   Role    @relation(fields: [roleId], references: [id])
+  entity Entity? @relation(fields: [entityId], references: [id])
+
+  @@schema("public")
+  @@map("user_account")
+}
+
+// === AUDIT SCHEMA ===
+
+model AuditLog {
+  id        String   @id @default(uuid()) @db.Uuid
+  entityId  String   @map("entity_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  action    String   @db.VarChar(20)
+  tableName String   @map("table_name") @db.VarChar(63)
+  recordId  String   @map("record_id") @db.Uuid
+  oldValues Json?  @map("old_values") @db.JsonB
+  newValues Json?  @map("new_values") @db.JsonB
+  ipAddress String?  @map("ip_address") @db.Inet
+  userAgent String?  @map("user_agent") @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@schema("audit")
+  @@map("audit_log")
+}
