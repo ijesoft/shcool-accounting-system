@@ -40,7 +40,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const schema = await getEntitySchema(session.entityId)
     if (!schema) return NextResponse.json(formatApiError("ERR_NOT_FOUND", "Entity not found"), { status: 404 })
     const body = await request.json()
-    const invoice = await vendorAccountService.createInvoice(schema, { ...body, vendorId: id })
+    const invoice = await vendorAccountService.createInvoice(schema, session.userId, { ...body, vendorId: id })
     return NextResponse.json(formatApiResponse(invoice), { status: 201 })
   } catch (error) {
     console.error("Vendor invoice create error:", error)

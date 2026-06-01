@@ -1,6 +1,7 @@
 import { entityRepository } from "@/repositories/entity.repository"
 import type { CreateEntityInput, UpdateEntityInput } from "@/lib/validators/entity"
 import { createEntitySchema } from "@/lib/entity-schema"
+import { ensureFiscalCalendar } from "@/lib/accounting/fiscal-calendar"
 
 function generateSchemaName(code: string): string {
   return `entity_${code.toLowerCase().replace(/[^a-z0-9]/g, "_")}`
@@ -33,6 +34,7 @@ export const entityService = {
     })
 
     await createEntitySchema(schemaName)
+    await ensureFiscalCalendar(entity.id, entity.fiscalYearStart)
 
     return entity
   },

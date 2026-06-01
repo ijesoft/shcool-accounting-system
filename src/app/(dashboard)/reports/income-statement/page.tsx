@@ -3,11 +3,12 @@ import { hasPermission } from "@/lib/auth/rbac"
 import { redirect } from "next/navigation"
 import { reportService } from "@/services/report.service"
 import { prisma } from "@/lib/db"
+import Link from "next/link"
 
-async function getData(entityId: string, from: string, to: string) {
+async function getData(entityId: string, from: string, to: string, comparative: boolean) {
   const entity = await prisma.entity.findUnique({ where: { id: entityId } })
   if (!entity) return null
-  return reportService.getIncomeStatement(entity.schemaName, from, to)
+  return reportService.getIncomeStatement(entity.schemaName, from, to, comparative)
 }
 
 export const dynamic = "force-dynamic"
@@ -15,91 +16,156 @@ export const dynamic = "force-dynamic"
 export default async function IncomeStatementPage({
   searchParams,
 }: {
-  searchParams: Promise<{ from?: string; to?: string }>
+  searchParams: Promise<{ from?: string; to?: string; comparative?: string }>
 }) {
   const params = await searchParams
   const now = new Date()
   const from = params.from || `${now.getFullYear()}-01-01`
   const to = params.to || now.toISOString().split("T")[0]
+  const comparative = params.comparative === "true"
 
   const session = await getSession()
   if (!session.userId) redirect("/login")
   if (!hasPermission(session.roleName, "reports", "read")) redirect("/")
   if (!session.entityId) return <p className="p-6 text-muted-foreground">Please select an entity.</p>
 
-  const data = await getData(session.entityId, from, to)
+  const data = await getData(session.entityId, from, to, comparative)
   if (!data) return <p className="p-6 text-muted-foreground">Entity not found.</p>
 
-  const totalRevenue = data
+  const currentRevenue = data.current
     .filter((r: any) => r.account_type === "revenue")
     .reduce((s: number, r: any) => s + Number(r.balance), 0)
-  const totalExpenses = data
+  const currentExpenses = data.current
     .filter((r: any) => r.account_type === "expense")
     .reduce((s: number, r: any) => s + Math.abs(Number(r.balance)), 0)
-  const netIncome = totalRevenue - totalExpenses
+  const currentNetIncome = currentRevenue - currentExpenses
+
+  let compRevenue = 0
+  let compExpenses = 0
+  let compNetIncome = 0
+
+  if (comparative && data.comparative) {
+    compRevenue = data.comparative
+      .filter((r: any) => r.account_type === "revenue")
+      .reduce((s: number, r: any) => s + Number(r.balance), 0)
+    compExpenses = data.comparative
+      .filter((r: any) => r.account_type === "expense")
+      .reduce((s: number, r: any) => s + Math.abs(Number(r.balance)), 0)
+    compNetIncome = compRevenue - compExpenses
+  }
+
+  const getCompRow = (code: string) => {
+    if (!comparative || !data.comparative) return null
+    return data.comparative.find((r: any) => r.account_code === code)
+  }
+
+  const parts = from.split('-')
+  const priorYearFrom = parts.length === 3 ? `${parseInt(parts[0], 10) - 1}-01-01` : ""
+  const priorYearTo = parts.length === 3 ? `${parseInt(parts[0], 10) - 1}-12-31` : ""
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Income Statement</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{data.reportTitle}</h1>
           <p className="text-sm text-muted-foreground">
             {new Date(from).toLocaleDateString()} — {new Date(to).toLocaleDateString()}
+            {comparative && ` (Comparative Prior Year: ${new Date(priorYearFrom).toLocaleDateString()} — ${new Date(priorYearTo).toLocaleDateString()})`}
           </p>
         </div>
-        <div className="flex gap-2 text-sm">
-          <a href={`/api/v1/financial-reports/export/csv?format=csv&report=income-statement&from=${from}&to=${to}`} className="text-blue-600 hover:underline">Download CSV</a>
-          <a href={`/api/v1/financial-reports/export/csv?format=xlsx&report=income-statement&from=${from}&to=${to}`} className="text-blue-600 hover:underline">Download XLSX</a>
+        <div className="flex flex-wrap gap-2 text-sm items-center">
+          <Link
+            href={`/reports/income-statement?from=${from}&to=${to}&comparative=${comparative ? "false" : "true"}`}
+            className="rounded-md border bg-background px-3 py-1.5 font-medium shadow-sm hover:bg-accent hover:text-accent-foreground"
+          >
+            {comparative ? "Hide Comparative" : "Show Comparative"}
+          </Link>
+          <a href={`/api/v1/financial-reports/export/csv?format=csv&report=income-statement&from=${from}&to=${to}&comparative=${comparative}`} className="text-blue-600 hover:underline px-2">Download CSV</a>
+          <a href={`/api/v1/financial-reports/export/csv?format=xlsx&report=income-statement&from=${from}&to=${to}&comparative=${comparative}`} className="text-blue-600 hover:underline px-2">Download XLSX</a>
         </div>
       </div>
 
-      <div className="rounded-lg border bg-card">
+      <div className="rounded-lg border bg-card shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-muted/50">
-                <th className="text-left p-3 font-medium">Account</th>
-                <th className="text-right p-3 font-medium">Amount</th>
+                <th className="text-left p-4 font-semibold text-muted-foreground">Account Description</th>
+                <th className="text-right p-4 font-semibold text-muted-foreground">Current Period</th>
+                {comparative && (
+                  <th className="text-right p-4 font-semibold text-muted-foreground">Prior Year Period</th>
+                )}
               </tr>
             </thead>
             <tbody>
-              {data.length === 0 && (
-                <tr><td colSpan={2} className="text-center p-6 text-muted-foreground">No data for this period.</td></tr>
+              {data.current.length === 0 && (
+                <tr>
+                  <td colSpan={comparative ? 3 : 2} className="text-center p-6 text-muted-foreground">
+                    No data for this period.
+                  </td>
+                </tr>
               )}
               <tr className="border-b bg-muted/30">
-                <td className="p-3 font-bold" colSpan={2}>Revenue</td>
+                <td className="p-4 font-bold text-foreground" colSpan={comparative ? 3 : 2}>Revenue</td>
               </tr>
-              {data.filter((r: any) => r.account_type === "revenue").map((row: any) => (
-                <tr key={row.account_code} className="border-b hover:bg-muted/50">
-                  <td className="p-3 pl-8">{row.account_name}</td>
-                  <td className="p-3 text-right font-mono">{Number(row.balance).toFixed(2)}</td>
-                </tr>
-              ))}
-              <tr className="border-b font-medium">
-                <td className="p-3 pl-8">Total Revenue</td>
-                <td className="p-3 text-right font-mono">{totalRevenue.toFixed(2)}</td>
+              {data.current.filter((r: any) => r.account_type === "revenue").map((row: any) => {
+                const compRow = getCompRow(row.account_code)
+                return (
+                  <tr key={row.account_code} className="border-b hover:bg-muted/50 transition-colors">
+                    <td className="p-4 pl-8 text-foreground">{row.account_name} ({row.account_code})</td>
+                    <td className="p-4 text-right font-mono">{Number(row.balance).toFixed(2)}</td>
+                    {comparative && (
+                      <td className="p-4 text-right font-mono text-muted-foreground">
+                        {compRow ? Number(compRow.balance).toFixed(2) : "0.00"}
+                      </td>
+                    )}
+                  </tr>
+                )
+              })}
+              <tr className="border-b font-semibold bg-muted/10">
+                <td className="p-4 pl-8">Total Revenue</td>
+                <td className="p-4 text-right font-mono">{currentRevenue.toFixed(2)}</td>
+                {comparative && (
+                  <td className="p-4 text-right font-mono text-muted-foreground">{compRevenue.toFixed(2)}</td>
+                )}
               </tr>
 
               <tr className="border-b bg-muted/30">
-                <td className="p-3 font-bold" colSpan={2}>Expenses</td>
+                <td className="p-4 font-bold text-foreground" colSpan={comparative ? 3 : 2}>Expenses</td>
               </tr>
-              {data.filter((r: any) => r.account_type === "expense").map((row: any) => (
-                <tr key={row.account_code} className="border-b hover:bg-muted/50">
-                  <td className="p-3 pl-8">{row.account_name}</td>
-                  <td className="p-3 text-right font-mono">{Math.abs(Number(row.balance)).toFixed(2)}</td>
-                </tr>
-              ))}
-              <tr className="border-b font-medium">
-                <td className="p-3 pl-8">Total Expenses</td>
-                <td className="p-3 text-right font-mono">{totalExpenses.toFixed(2)}</td>
+              {data.current.filter((r: any) => r.account_type === "expense").map((row: any) => {
+                const compRow = getCompRow(row.account_code)
+                return (
+                  <tr key={row.account_code} className="border-b hover:bg-muted/50 transition-colors">
+                    <td className="p-4 pl-8 text-foreground">{row.account_name} ({row.account_code})</td>
+                    <td className="p-4 text-right font-mono">{Math.abs(Number(row.balance)).toFixed(2)}</td>
+                    {comparative && (
+                      <td className="p-4 text-right font-mono text-muted-foreground">
+                        {compRow ? Math.abs(Number(compRow.balance)).toFixed(2) : "0.00"}
+                      </td>
+                    )}
+                  </tr>
+                )
+              })}
+              <tr className="border-b font-semibold bg-muted/10">
+                <td className="p-4 pl-8">Total Expenses</td>
+                <td className="p-4 text-right font-mono">{currentExpenses.toFixed(2)}</td>
+                {comparative && (
+                  <td className="p-4 text-right font-mono text-muted-foreground">{compExpenses.toFixed(2)}</td>
+                )}
               </tr>
             </tbody>
             <tfoot>
-              <tr className="border-t font-bold text-lg">
-                <td className="p-3">Net Income (Loss)</td>
-                <td className={`p-3 text-right font-mono ${netIncome >= 0 ? "text-green-600" : "text-red-600"}`}>
-                  {netIncome.toFixed(2)}
+              <tr className="border-t-2 font-bold text-base bg-muted/20">
+                <td className="p-4">Net Income (Loss)</td>
+                <td className={`p-4 text-right font-mono ${currentNetIncome >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                  {currentNetIncome.toFixed(2)}
                 </td>
+                {comparative && (
+                  <td className={`p-4 text-right font-mono ${compNetIncome >= 0 ? "text-emerald-600/70" : "text-red-600/70"}`}>
+                    {compNetIncome.toFixed(2)}
+                  </td>
+                )}
               </tr>
             </tfoot>
           </table>

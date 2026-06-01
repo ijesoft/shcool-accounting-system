@@ -28,7 +28,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(formatApiError("ERR_VALIDATION", "from and to query params required"), { status: 400 })
     }
 
-    const result = await reportService.getIncomeStatement(schema, from, to)
+    const comparative = request.nextUrl.searchParams.get("comparative") === "true"
+
+    const result = await reportService.getIncomeStatement(schema, from, to, comparative)
     return NextResponse.json(formatApiResponse(result))
   } catch (error) {
     console.error("Income statement error:", error)

@@ -20,6 +20,7 @@ export default function NewCashReceiptPage() {
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split("T")[0])
   const [amount, setAmount] = useState("")
   const [paymentMethod, setPaymentMethod] = useState("cash")
+  const [paymentType, setPaymentType] = useState<"tuition" | "enrollment_deposit">("tuition")
   const [checkNumber, setCheckNumber] = useState("")
   const [checkDate, setCheckDate] = useState("")
   const [bankName, setBankName] = useState("")
@@ -48,6 +49,7 @@ export default function NewCashReceiptPage() {
           paymentDate,
           amount: parseFloat(amount),
           paymentMethod,
+          paymentType,
           checkNumber: checkNumber || undefined,
           checkDate: checkDate || undefined,
           bankName: bankName || undefined,
@@ -90,6 +92,18 @@ export default function NewCashReceiptPage() {
             <div className="space-y-2">
               <Label htmlFor="amount">Amount</Label>
               <Input id="amount" type="number" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="paymentType">Payment Type</Label>
+              <select
+                id="paymentType"
+                value={paymentType}
+                onChange={(e) => setPaymentType(e.target.value as "tuition" | "enrollment_deposit")}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              >
+                <option value="tuition">Tuition / Fee Payment</option>
+                <option value="enrollment_deposit">Enrollment Deposit</option>
+              </select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="paymentMethod">Payment Method</Label>

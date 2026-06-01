@@ -21,6 +21,7 @@ model Entity {
   fiscalYearStart  DateTime @map("fiscal_year_start") @db.Date
   status           String   @default("active") @db.VarChar(20)
   schemaName       String   @unique @map("schema_name") @db.VarChar(63)
+  settings         Json     @default("{}") @db.JsonB
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @updatedAt @map("updated_at")
 

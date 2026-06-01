@@ -18,18 +18,33 @@ const reportLinks = [
   },
   {
     href: "/reports/income-statement",
-    title: "Income Statement",
-    description: "Revenue and expense summary showing profit/loss for a date range.",
+    title: "Statement of Comprehensive Income",
+    description: "PFRS revenue and expense summary showing profit or loss for a date range (formerly Income Statement).",
   },
   {
     href: "/reports/balance-sheet",
-    title: "Balance Sheet",
-    description: "Assets, liabilities, and equity as of a specific date.",
+    title: "Statement of Financial Position",
+    description: "PFRS statement showing assets, liabilities, and equity as of a specific date (formerly Balance Sheet).",
+  },
+  {
+    href: "/reports/changes-in-equity",
+    title: "Statement of Changes in Equity",
+    description: "PFRS statement tracking beginning balance, net income, other changes, and ending balance of equity accounts.",
   },
   {
     href: "/reports/cash-flow",
-    title: "Cash Flow Statement",
+    title: "Statement of Cash Flows",
     description: "Cash inflows and outflows from operating, investing, and financing activities.",
+  },
+  {
+    href: "/reports/ar-aging",
+    title: "Accounts Receivable Aging",
+    description: "Student receivables by aging bucket for collections follow-up.",
+  },
+  {
+    href: "/reports/unearned-tuition",
+    title: "Unearned Tuition Roll-Forward",
+    description: "Deferred tuition billings, revenue recognized, and closing unearned balance.",
   },
 ]
 

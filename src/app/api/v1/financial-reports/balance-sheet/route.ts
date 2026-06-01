@@ -27,7 +27,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(formatApiError("ERR_VALIDATION", "as_of query param required"), { status: 400 })
     }
 
-    const result = await reportService.getBalanceSheet(schema, asOf)
+    const comparative = request.nextUrl.searchParams.get("comparative") === "true"
+
+    const result = await reportService.getBalanceSheet(schema, asOf, comparative)
     return NextResponse.json(formatApiResponse(result))
   } catch (error) {
     console.error("Balance sheet error:", error)

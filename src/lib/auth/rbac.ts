@@ -13,8 +13,11 @@ export type Resource =
   | "entities"
   | "audit_log"
   | "fiscal_periods"
+  | "employees"
+  | "payroll"
+  | "budget"
 
-export type Action = "create" | "read" | "update" | "delete" | "post" | "approve" | "export" | "void" | "depreciate" | "dispose"
+export type Action = "create" | "read" | "update" | "delete" | "post" | "approve" | "export" | "void" | "depreciate" | "dispose" | "submit" | "reject"
 
 const rolePermissions: Record<string, { resource: Resource; action: Action }[]> = {
   super_admin: [
@@ -40,6 +43,7 @@ const rolePermissions: Record<string, { resource: Resource; action: Action }[]> 
     { resource: "audit_log", action: "read" },
     { resource: "official_receipts", action: "void" },
     { resource: "fiscal_periods", action: "create" },
+    { resource: "fiscal_periods", action: "read" },
     { resource: "fiscal_periods", action: "update" },
     { resource: "student_accounts", action: "create" },
     { resource: "student_accounts", action: "read" },
@@ -73,6 +77,18 @@ const rolePermissions: Record<string, { resource: Resource; action: Action }[]> 
     { resource: "bank_reconciliation", action: "read" },
     { resource: "bank_reconciliation", action: "update" },
     { resource: "bank_reconciliation", action: "post" },
+    { resource: "employees", action: "create" },
+    { resource: "employees", action: "read" },
+    { resource: "employees", action: "update" },
+    { resource: "employees", action: "delete" },
+    { resource: "payroll", action: "create" },
+    { resource: "payroll", action: "read" },
+    { resource: "payroll", action: "post" },
+    { resource: "payroll", action: "void" },
+    { resource: "budget", action: "create" },
+    { resource: "budget", action: "read" },
+    { resource: "budget", action: "update" },
+    { resource: "budget", action: "delete" },
   ],
   accountant: [
     { resource: "accounts", action: "create" },
@@ -84,6 +100,7 @@ const rolePermissions: Record<string, { resource: Resource; action: Action }[]> 
     { resource: "journal_entries", action: "approve" },
     { resource: "reports", action: "read" },
     { resource: "reports", action: "export" },
+    { resource: "fiscal_periods", action: "read" },
     { resource: "student_accounts", action: "create" },
     { resource: "student_accounts", action: "read" },
     { resource: "student_accounts", action: "update" },
@@ -107,6 +124,17 @@ const rolePermissions: Record<string, { resource: Resource; action: Action }[]> 
     { resource: "bank_reconciliation", action: "read" },
     { resource: "bank_reconciliation", action: "update" },
     { resource: "bank_reconciliation", action: "post" },
+    { resource: "employees", action: "read" },
+    { resource: "employees", action: "create" },
+    { resource: "employees", action: "update" },
+    { resource: "payroll", action: "create" },
+    { resource: "payroll", action: "read" },
+    { resource: "payroll", action: "post" },
+    { resource: "payroll", action: "void" },
+    { resource: "budget", action: "create" },
+    { resource: "budget", action: "read" },
+    { resource: "budget", action: "update" },
+    { resource: "budget", action: "delete" },
   ],
   finance_officer: [
     { resource: "accounts", action: "read" },

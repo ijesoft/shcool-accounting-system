@@ -39,7 +39,11 @@ export default async function VendorAccountsPage() {
               {vendors.map((v: any) => (
                 <tr key={v.id} className="border-b hover:bg-muted/50">
                   <td className="p-3 font-mono text-xs">{v.vendor_code}</td>
-                  <td className="p-3">{v.vendor_name}</td>
+                  <td className="p-3">
+                    <Link href={`/vendor-accounts/${v.id}`} className="text-blue-600 hover:underline">
+                      {v.vendor_name}
+                    </Link>
+                  </td>
                   <td className="p-3 text-xs">{v.contact_person || "—"}</td>
                   <td className="p-3 font-mono text-xs">{v.tin || "—"}</td>
                   <td className="p-3 text-xs">{v.payment_terms || "—"}</td>

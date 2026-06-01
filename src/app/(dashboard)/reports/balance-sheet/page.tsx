@@ -3,11 +3,12 @@ import { hasPermission } from "@/lib/auth/rbac"
 import { redirect } from "next/navigation"
 import { reportService } from "@/services/report.service"
 import { prisma } from "@/lib/db"
+import Link from "next/link"
 
-async function getData(entityId: string, asOf: string) {
+async function getData(entityId: string, asOf: string, comparative: boolean) {
   const entity = await prisma.entity.findUnique({ where: { id: entityId } })
   if (!entity) return null
-  return reportService.getBalanceSheet(entity.schemaName, asOf)
+  return reportService.getBalanceSheet(entity.schemaName, asOf, comparative)
 }
 
 function calcBalance(row: any): number {
@@ -20,99 +21,184 @@ export const dynamic = "force-dynamic"
 export default async function BalanceSheetPage({
   searchParams,
 }: {
-  searchParams: Promise<{ as_of?: string }>
+  searchParams: Promise<{ as_of?: string; comparative?: string }>
 }) {
-  const { as_of } = await searchParams
-  const asOf = as_of || new Date().toISOString().split("T")[0]
+  const params = await searchParams
+  const asOf = params.as_of || new Date().toISOString().split("T")[0]
+  const comparative = params.comparative === "true"
 
   const session = await getSession()
   if (!session.userId) redirect("/login")
   if (!hasPermission(session.roleName, "reports", "read")) redirect("/")
   if (!session.entityId) return <p className="p-6 text-muted-foreground">Please select an entity.</p>
 
-  const data = await getData(session.entityId, asOf)
+  const data = await getData(session.entityId, asOf, comparative)
   if (!data) return <p className="p-6 text-muted-foreground">Entity not found.</p>
 
-  const assets = data.filter((r: any) => r.account_type === "asset" || r.account_type === "contra_asset")
-  const liabilities = data.filter((r: any) => r.account_type === "liability" || r.account_type === "contra_liability")
-  const equity = data.filter((r: any) => r.account_type === "equity")
+  const currentAssets = data.current.filter((r: any) => r.account_type === "asset" || r.account_type === "contra_asset")
+  const currentLiabilities = data.current.filter((r: any) => r.account_type === "liability" || r.account_type === "contra_liability")
+  const currentEquity = data.current.filter((r: any) => r.account_type === "equity")
 
-  const totalAssets = assets.reduce((s: number, r: any) => s + calcBalance(r), 0)
-  const totalLiabilities = liabilities.reduce((s: number, r: any) => s + calcBalance(r), 0)
-  const totalEquity = equity.reduce((s: number, r: any) => s + calcBalance(r), 0)
+  const totalAssets = currentAssets.reduce((s: number, r: any) => s + calcBalance(r), 0)
+  const totalLiabilities = currentLiabilities.reduce((s: number, r: any) => s + calcBalance(r), 0)
+  const totalEquity = currentEquity.reduce((s: number, r: any) => s + calcBalance(r), 0)
+
+  let compAssets: any[] = []
+  let compLiabilities: any[] = []
+  let compEquity: any[] = []
+  let totalCompAssets = 0
+  let totalCompLiabilities = 0
+  let totalCompEquity = 0
+
+  if (comparative && data.comparative) {
+    compAssets = data.comparative.filter((r: any) => r.account_type === "asset" || r.account_type === "contra_asset")
+    compLiabilities = data.comparative.filter((r: any) => r.account_type === "liability" || r.account_type === "contra_liability")
+    compEquity = data.comparative.filter((r: any) => r.account_type === "equity")
+
+    totalCompAssets = compAssets.reduce((s: number, r: any) => s + calcBalance(r), 0)
+    totalCompLiabilities = compLiabilities.reduce((s: number, r: any) => s + calcBalance(r), 0)
+    totalCompEquity = compEquity.reduce((s: number, r: any) => s + calcBalance(r), 0)
+  }
+
+  const getCompRow = (code: string, category: "asset" | "liability" | "equity") => {
+    if (!comparative || !data.comparative) return null
+    const list = category === "asset" ? compAssets : category === "liability" ? compLiabilities : compEquity
+    return list.find((r: any) => r.account_code === code)
+  }
+
+  const parts = asOf.split('-')
+  const priorYearAsOf = parts.length === 3 ? `${parseInt(parts[0], 10) - 1}-${parts[1]}-${parts[2]}` : ""
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Balance Sheet</h1>
-          <p className="text-sm text-muted-foreground">As of {new Date(asOf).toLocaleDateString()}</p>
+          <h1 className="text-3xl font-bold tracking-tight">{data.reportTitle}</h1>
+          <p className="text-sm text-muted-foreground">
+            As of {new Date(asOf).toLocaleDateString()}
+            {comparative && ` (Comparative Prior Year: As of ${new Date(priorYearAsOf).toLocaleDateString()})`}
+          </p>
         </div>
-        <div className="flex gap-2 text-sm">
-          <a href={`/api/v1/financial-reports/export/csv?format=csv&report=balance-sheet&as_of=${asOf}`} className="text-blue-600 hover:underline">Download CSV</a>
-          <a href={`/api/v1/financial-reports/export/csv?format=xlsx&report=balance-sheet&as_of=${asOf}`} className="text-blue-600 hover:underline">Download XLSX</a>
+        <div className="flex flex-wrap gap-2 text-sm items-center">
+          <Link
+            href={`/reports/balance-sheet?as_of=${asOf}&comparative=${comparative ? "false" : "true"}`}
+            className="rounded-md border bg-background px-3 py-1.5 font-medium shadow-sm hover:bg-accent hover:text-accent-foreground"
+          >
+            {comparative ? "Hide Comparative" : "Show Comparative"}
+          </Link>
+          <a href={`/api/v1/financial-reports/export/csv?format=csv&report=balance-sheet&as_of=${asOf}&comparative=${comparative}`} className="text-blue-600 hover:underline px-2">Download CSV</a>
+          <a href={`/api/v1/financial-reports/export/csv?format=xlsx&report=balance-sheet&as_of=${asOf}&comparative=${comparative}`} className="text-blue-600 hover:underline px-2">Download XLSX</a>
         </div>
       </div>
 
-      <div className="rounded-lg border bg-card">
+      <div className="rounded-lg border bg-card shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-muted/50">
-                <th className="text-left p-3 font-medium">Account</th>
-                <th className="text-right p-3 font-medium">Amount</th>
+                <th className="text-left p-4 font-semibold text-muted-foreground">Account Description</th>
+                <th className="text-right p-4 font-semibold text-muted-foreground">Current Balance</th>
+                {comparative && (
+                  <th className="text-right p-4 font-semibold text-muted-foreground">Prior Year Balance</th>
+                )}
               </tr>
             </thead>
             <tbody>
-              {data.length === 0 && (
-                <tr><td colSpan={2} className="text-center p-6 text-muted-foreground">No data available.</td></tr>
+              {data.current.length === 0 && (
+                <tr>
+                  <td colSpan={comparative ? 3 : 2} className="text-center p-6 text-muted-foreground">
+                    No data available.
+                  </td>
+                </tr>
               )}
+              
+              {/* Assets Section */}
               <tr className="border-b bg-muted/30">
-                <td className="p-3 font-bold" colSpan={2}>Assets</td>
+                <td className="p-4 font-bold text-foreground" colSpan={comparative ? 3 : 2}>Assets</td>
               </tr>
-              {assets.map((row: any) => (
-                <tr key={row.account_code} className="border-b hover:bg-muted/50">
-                  <td className="p-3 pl-8">{row.account_name}</td>
-                  <td className="p-3 text-right font-mono">{calcBalance(row).toFixed(2)}</td>
-                </tr>
-              ))}
-              <tr className="border-b font-medium">
-                <td className="p-3 pl-8">Total Assets</td>
-                <td className="p-3 text-right font-mono">{totalAssets.toFixed(2)}</td>
+              {currentAssets.map((row: any) => {
+                const compRow = getCompRow(row.account_code, "asset")
+                return (
+                  <tr key={row.account_code} className="border-b hover:bg-muted/50 transition-colors">
+                    <td className="p-4 pl-8 text-foreground">{row.account_name} ({row.account_code})</td>
+                    <td className="p-4 text-right font-mono">{calcBalance(row).toFixed(2)}</td>
+                    {comparative && (
+                      <td className="p-4 text-right font-mono text-muted-foreground">
+                        {compRow ? calcBalance(compRow).toFixed(2) : "0.00"}
+                      </td>
+                    )}
+                  </tr>
+                )
+              })}
+              <tr className="border-b font-semibold bg-muted/10">
+                <td className="p-4 pl-8">Total Assets</td>
+                <td className="p-4 text-right font-mono">{totalAssets.toFixed(2)}</td>
+                {comparative && (
+                  <td className="p-4 text-right font-mono text-muted-foreground">{totalCompAssets.toFixed(2)}</td>
+                )}
               </tr>
 
+              {/* Liabilities Section */}
               <tr className="border-b bg-muted/30">
-                <td className="p-3 font-bold" colSpan={2}>Liabilities</td>
+                <td className="p-4 font-bold text-foreground" colSpan={comparative ? 3 : 2}>Liabilities</td>
               </tr>
-              {liabilities.map((row: any) => (
-                <tr key={row.account_code} className="border-b hover:bg-muted/50">
-                  <td className="p-3 pl-8">{row.account_name}</td>
-                  <td className="p-3 text-right font-mono">{calcBalance(row).toFixed(2)}</td>
-                </tr>
-              ))}
-              <tr className="border-b font-medium">
-                <td className="p-3 pl-8">Total Liabilities</td>
-                <td className="p-3 text-right font-mono">{totalLiabilities.toFixed(2)}</td>
+              {currentLiabilities.map((row: any) => {
+                const compRow = getCompRow(row.account_code, "liability")
+                return (
+                  <tr key={row.account_code} className="border-b hover:bg-muted/50 transition-colors">
+                    <td className="p-4 pl-8 text-foreground">{row.account_name} ({row.account_code})</td>
+                    <td className="p-4 text-right font-mono">{calcBalance(row).toFixed(2)}</td>
+                    {comparative && (
+                      <td className="p-4 text-right font-mono text-muted-foreground">
+                        {compRow ? calcBalance(compRow).toFixed(2) : "0.00"}
+                      </td>
+                    )}
+                  </tr>
+                )
+              })}
+              <tr className="border-b font-semibold bg-muted/10">
+                <td className="p-4 pl-8">Total Liabilities</td>
+                <td className="p-4 text-right font-mono">{totalLiabilities.toFixed(2)}</td>
+                {comparative && (
+                  <td className="p-4 text-right font-mono text-muted-foreground">{totalCompLiabilities.toFixed(2)}</td>
+                )}
               </tr>
 
+              {/* Equity Section */}
               <tr className="border-b bg-muted/30">
-                <td className="p-3 font-bold" colSpan={2}>Equity</td>
+                <td className="p-4 font-bold text-foreground" colSpan={comparative ? 3 : 2}>Equity</td>
               </tr>
-              {equity.map((row: any) => (
-                <tr key={row.account_code} className="border-b hover:bg-muted/50">
-                  <td className="p-3 pl-8">{row.account_name}</td>
-                  <td className="p-3 text-right font-mono">{calcBalance(row).toFixed(2)}</td>
-                </tr>
-              ))}
-              <tr className="border-b font-medium">
-                <td className="p-3 pl-8">Total Equity</td>
-                <td className="p-3 text-right font-mono">{totalEquity.toFixed(2)}</td>
+              {currentEquity.map((row: any) => {
+                const compRow = getCompRow(row.account_code, "equity")
+                return (
+                  <tr key={row.account_code} className="border-b hover:bg-muted/50 transition-colors">
+                    <td className="p-4 pl-8 text-foreground">{row.account_name} ({row.account_code})</td>
+                    <td className="p-4 text-right font-mono">{calcBalance(row).toFixed(2)}</td>
+                    {comparative && (
+                      <td className="p-4 text-right font-mono text-muted-foreground">
+                        {compRow ? calcBalance(compRow).toFixed(2) : "0.00"}
+                      </td>
+                    )}
+                  </tr>
+                )
+              })}
+              <tr className="border-b font-semibold bg-muted/10">
+                <td className="p-4 pl-8">Total Equity</td>
+                <td className="p-4 text-right font-mono">{totalEquity.toFixed(2)}</td>
+                {comparative && (
+                  <td className="p-4 text-right font-mono text-muted-foreground">{totalCompEquity.toFixed(2)}</td>
+                )}
               </tr>
             </tbody>
             <tfoot>
-              <tr className="border-t font-bold text-lg">
-                <td className="p-3">Total Liabilities & Equity</td>
-                <td className="p-3 text-right font-mono">{(totalLiabilities + totalEquity).toFixed(2)}</td>
+              <tr className="border-t-2 font-bold text-base bg-muted/20">
+                <td className="p-4">Total Liabilities & Equity</td>
+                <td className="p-4 text-right font-mono">{(totalLiabilities + totalEquity).toFixed(2)}</td>
+                {comparative && (
+                  <td className="p-4 text-right font-mono text-muted-foreground">
+                    {(totalCompLiabilities + totalCompEquity).toFixed(2)}
+                  </td>
+                )}
               </tr>
             </tfoot>
           </table>

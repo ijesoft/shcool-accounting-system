@@ -42,7 +42,7 @@ export const fixedAssetService = {
       data.acquisitionDate, data.acquisitionCost,
       data.estimatedLifeYears, data.salvageValue || 0,
       data.depreciationMethod || "straight_line"
-    ).then(r => r[0])
+    ).then((r: any) => r[0])
   },
 
   async update(entitySchema: string, id: string, data: {
@@ -62,7 +62,7 @@ export const fixedAssetService = {
     return prisma.$queryRawUnsafe<any[]>(
       `UPDATE "${entitySchema}".fixed_asset SET ${sets.join(", ")}, updated_at = NOW() WHERE id = $${i} AND status = 'active' RETURNING *`,
       ...vals
-    ).then(r => r[0])
+    ).then((r: any) => r[0])
   },
 
   async getDepreciationSchedule(entitySchema: string, assetId: string) {
@@ -279,5 +279,43 @@ export const fixedAssetService = {
     }
 
     return { journalEntry: entry, gainLoss }
+  },
+
+  async depreciateAll(entitySchema: string, fiscalPeriodId: string, userId: string) {
+    const activeAssets = await prisma.$queryRawUnsafe<any[]>(
+      `SELECT id, asset_name, asset_code FROM "${entitySchema}".fixed_asset WHERE status = 'active'`
+    )
+
+    const results: any[] = []
+    const errors: any[] = []
+
+    for (const asset of activeAssets) {
+      try {
+        const res = await this.depreciate(entitySchema, asset.id, fiscalPeriodId, userId)
+        results.push({
+          assetId: asset.id,
+          assetCode: asset.asset_code,
+          assetName: asset.asset_name,
+          success: true,
+          amount: res.depreciationAmount
+        })
+      } catch (err: any) {
+        errors.push({
+          assetId: asset.id,
+          assetCode: asset.asset_code,
+          assetName: asset.asset_name,
+          success: false,
+          message: err.message || String(err)
+        })
+      }
+    }
+
+    return {
+      totalProcessed: activeAssets.length,
+      successCount: results.length,
+      errorCount: errors.length,
+      results,
+      errors
+    }
   },
 }

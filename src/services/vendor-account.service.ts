@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db"
+import { apEngine } from "@/lib/accounting/ap-engine"
 
 export const vendorAccountService = {
   async list(entitySchema: string) {
@@ -38,13 +39,40 @@ export const vendorAccountService = {
     )
   },
 
-  async createInvoice(entitySchema: string, data: {
-    vendorId: string; invoiceNumber: string; invoiceDate: string; dueDate: string; totalAmount: number
-  }) {
-    return prisma.$queryRawUnsafe<any[]>(
+  async createInvoice(
+    entitySchema: string,
+    userId: string,
+    data: {
+      vendorId: string
+      invoiceNumber: string
+      invoiceDate: string
+      dueDate: string
+      totalAmount: number
+      expenseAccountCode?: string
+    }
+  ) {
+    const vendor = await this.getById(entitySchema, data.vendorId)
+    if (!vendor) throw new Error("Vendor not found")
+
+    const invoice = await prisma.$queryRawUnsafe<any[]>(
       `INSERT INTO "${entitySchema}".vendor_invoice (invoice_number, vendor_id, invoice_date, due_date, total_amount, balance)
        VALUES ($1, $2, $3::date, $4::date, $5, $5) RETURNING *`,
       data.invoiceNumber, data.vendorId, data.invoiceDate, data.dueDate, data.totalAmount
-    ).then(r => r[0])
+    ).then((r) => r[0])
+
+    await apEngine.postVendorInvoice(entitySchema, userId, {
+      invoiceId: invoice.id,
+      invoiceNumber: data.invoiceNumber,
+      invoiceDate: data.invoiceDate,
+      vendorName: vendor.vendor_name,
+      totalAmount: data.totalAmount,
+      expenseAccountCode: data.expenseAccountCode,
+    })
+
+    return invoice
+  },
+
+  async cancelInvoice(entitySchema: string, userId: string, invoiceId: string) {
+    return apEngine.reverseVendorInvoice(entitySchema, userId, invoiceId)
   },
 }

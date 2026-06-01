@@ -145,16 +145,17 @@ export const postingEngine = {
       lineOrder: l.line_order,
     }))
 
-    // Create reversing entry
+    // Create reversing entry on the original entry date
+    const reverseDate = original[0].entry_date
     const newEntry = await prisma.$queryRawUnsafe<any[]>(
       `INSERT INTO "${entitySchema}".journal_entry 
        (entry_number, entry_date, reference, source_module, description, status, created_by)
        VALUES (
          (SELECT CONCAT(prefix, '-', LPAD(CAST(next_number AS TEXT), 5, '0'))
           FROM "${entitySchema}".number_series WHERE series_type = 'JE' LIMIT 1),
-         $1, $2, 'JE', $3, 'draft', $4
+         $1, $2, 'JE', $3, 'approved', $4
        ) RETURNING *`,
-      new Date(), `REV-${original[0].entry_number}`, `Reversing entry for ${original[0].entry_number}`, userId
+      reverseDate, `REV-${original[0].entry_number}`, `Reversing entry for ${original[0].entry_number}`, userId
     )
 
     for (const line of reversedLines) {

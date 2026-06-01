@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client"
 import bcrypt from "bcryptjs"
 import { createEntitySchema } from "../src/lib/entity-schema"
+import { ensureFiscalCalendar } from "../src/lib/accounting/fiscal-calendar"
 
 const prisma = new PrismaClient()
 
@@ -27,6 +28,7 @@ const rolePermissions: Record<string, { resource: string; action: string }[]> = 
     { resource: "entities", action: "delete" },
     { resource: "audit_log", action: "read" },
     { resource: "fiscal_periods", action: "create" },
+    { resource: "fiscal_periods", action: "read" },
     { resource: "fiscal_periods", action: "update" },
   ],
   accountant: [
@@ -135,6 +137,7 @@ async function main() {
 
   // Create the entity's database schema and tables
   await createEntitySchema("entity_main")
+  await ensureFiscalCalendar(mainEntity.id, mainEntity.fiscalYearStart)
 
   // Create super admin user (assign to the main entity)
   const superAdminRole = await prisma.role.findUnique({ where: { name: "super_admin" } })

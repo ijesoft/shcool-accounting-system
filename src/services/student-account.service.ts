@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db"
+import { billingEngine } from "@/lib/accounting/billing-engine"
 
 export const studentAccountService = {
   async list(entitySchema: string) {
@@ -52,27 +53,67 @@ export const studentAccountService = {
     )
   },
 
-  async createInvoice(entitySchema: string, data: {
-    studentId: string; invoiceDate: string; dueDate: string; totalAmount: number; term?: string
-    lines: { feeType: string; amount: number; discountType?: string; discountAmount?: number }[]
-  }) {
+  async createInvoice(
+    entitySchema: string,
+    userId: string,
+    data: {
+      studentId: string
+      invoiceDate: string
+      dueDate: string
+      totalAmount: number
+      term?: string
+      termStartDate?: string
+      termEndDate?: string
+      entityId?: string
+      lines: { feeType: string; amount: number; discountType?: string; discountAmount?: number }[]
+    }
+  ) {
+    const student = await this.getById(entitySchema, data.studentId)
+    if (!student) throw new Error("Student not found")
+
     const invRows = await prisma.$queryRawUnsafe<any[]>(
-      `INSERT INTO "${entitySchema}".student_invoice (invoice_number, student_id, term, invoice_date, due_date, total_amount, balance)
+      `INSERT INTO "${entitySchema}".student_invoice
+       (invoice_number, student_id, term, term_start_date, term_end_date, invoice_date, due_date, total_amount, balance)
        VALUES (
          (SELECT CONCAT('INV-', LPAD(COALESCE(MAX(CAST(SPLIT_PART(invoice_number, '-', 2) AS INT)), 0) + 1, 6, '0')) FROM "${entitySchema}".student_invoice),
-         $1, $2, $3::date, $4::date, $5, $5
+         $1, $2, $3::date, $4::date, $5::date, $6::date, $7, $7
        ) RETURNING *`,
-      data.studentId, data.term || null, data.invoiceDate, data.dueDate, data.totalAmount
+      data.studentId,
+      data.term || null,
+      data.termStartDate || null,
+      data.termEndDate || null,
+      data.invoiceDate,
+      data.dueDate,
+      data.totalAmount
     )
     const invoice = invRows[0]
-    for (let i = 0; i < data.lines.length; i++) {
-      const line = data.lines[i]
+    for (const line of data.lines) {
       await prisma.$queryRawUnsafe(
         `INSERT INTO "${entitySchema}".student_invoice_line (invoice_id, fee_type, amount, discount_type, discount_amount) VALUES ($1, $2, $3, $4, $5)`,
         invoice.id, line.feeType, line.amount, line.discountType || null, line.discountAmount || 0
       )
     }
-    return invoice
+
+    await billingEngine.postStudentInvoice(entitySchema, userId, {
+      invoiceId: invoice.id,
+      invoiceNumber: invoice.invoice_number,
+      invoiceDate: data.invoiceDate,
+      studentName: student.full_name,
+      entityId: data.entityId,
+      lines: data.lines.map((line) => ({
+        feeType: line.feeType,
+        amount: line.amount,
+        discountAmount: line.discountAmount,
+      })),
+    })
+
+    return this.getInvoices(entitySchema, data.studentId).then((rows) =>
+      rows.find((row: any) => row.id === invoice.id) ?? invoice
+    )
+  },
+
+  async cancelInvoice(entitySchema: string, userId: string, invoiceId: string) {
+    return billingEngine.reverseStudentInvoice(entitySchema, userId, invoiceId)
   },
 
   async getPayments(entitySchema: string, studentId: string) {

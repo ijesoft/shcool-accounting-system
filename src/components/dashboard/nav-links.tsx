@@ -16,6 +16,8 @@ const links = [
   { href: "/vendor-accounts", label: "Vendor Accounts", icon: "🏢" },
   { href: "/fixed-assets", label: "Fixed Assets", icon: "🏗️" },
   { href: "/reports", label: "Reports", icon: "📈" },
+  { href: "/settings/fiscal-periods", label: "Fiscal Periods", icon: "📅" },
+  { href: "/settings/revenue-recognition", label: "Rev. Recognition", icon: "📒" },
   { href: "/entities", label: "Branches", icon: "🏫" },
   { href: "/admin", label: "Admin", icon: "⚙️" },
 ]

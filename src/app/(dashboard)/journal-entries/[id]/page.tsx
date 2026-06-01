@@ -5,7 +5,7 @@ import { prisma } from "@/lib/db"
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import Link from "next/link"
-import { PostEntryButton } from "./post-button"
+import { JournalEntryWorkflow } from "./workflow-buttons"
 
 async function getEntry(entityId: string, entryId: string) {
   const entity = await prisma.entity.findUnique({ where: { id: entityId } })
@@ -39,21 +39,27 @@ export default async function JournalEntryDetailPage({ params }: { params: Promi
   const entry = await getEntry(session.entityId, id)
   if (!entry) return <p className="p-6 text-muted-foreground">Entry not found.</p>
 
+  const canApprove = hasPermission(session.roleName, "journal_entries", "approve")
+  const canPost = hasPermission(session.roleName, "journal_entries", "post")
+
   return (
     <div className="space-y-6 max-w-4xl">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">{entry.entry_number}</h1>
-          <p className="text-sm text-muted-foreground capitalize">Status: {entry.status}</p>
+          <p className="text-sm text-muted-foreground capitalize">Status: {entry.status.replace(/_/g, " ")}</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-start">
+          <JournalEntryWorkflow
+            entryId={id}
+            status={entry.status}
+            canApprove={canApprove}
+            canPost={canPost}
+          />
           {entry.status === "draft" && (
-            <>
-              <PostEntryButton entryId={id} />
-              <Link href={`/journal-entries/${id}/edit`}>
-                <Button variant="outline">Edit</Button>
-              </Link>
-            </>
+            <Link href={`/journal-entries/${id}/edit`}>
+              <Button variant="outline">Edit</Button>
+            </Link>
           )}
           <Link href="/journal-entries">
             <Button variant="ghost">Back</Button>

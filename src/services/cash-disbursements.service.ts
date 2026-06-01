@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db"
 import { postingEngine } from "@/lib/accounting/posting-engine"
 import { journalEntryRepository } from "@/repositories/journal-entry.repository"
 import { auditLog } from "@/lib/audit/audit-log"
+import { getBirSettings } from "@/lib/entity-settings"
 
 export const cashDisbursementsService = {
   async list(entitySchema: string) {
@@ -20,7 +21,8 @@ export const cashDisbursementsService = {
   async create(entitySchema: string, userId: string, data: {
     cvDate: string; payeeType: string; payeeName: string; payeeAddress?: string; tin?: string
     amount: number; paymentMethod: string; checkNumber?: string; checkDate?: string; bankAccount?: string
-    withholdingTaxRate?: number; description?: string
+    withholdingTaxRate?: number; withholdingTaxType?: "expanded" | "creditable" | "final"
+    withholdingFormCode?: string; description?: string
   }) {
     const wtAmount = data.withholdingTaxRate ? (data.amount * data.withholdingTaxRate / 100) : 0
     const rows = await prisma.$queryRawUnsafe<any[]>(
@@ -41,6 +43,12 @@ export const cashDisbursementsService = {
     if (!dv) throw new Error("Disbursement not found")
     if (dv.journal_entry_id) throw new Error("Already posted")
     if (dv.status !== "draft") throw new Error("Can only post draft disbursements")
+
+    const entityRows = await prisma.$queryRawUnsafe<any[]>(
+      `SELECT id FROM public.entity WHERE schema_name = $1`, entitySchema
+    )
+    if (!entityRows[0]) throw new Error("Entity not found for schema")
+    const entityId = entityRows[0].id
 
     const accounts = await prisma.$queryRawUnsafe<any[]>(
       `SELECT id, account_code FROM "${entitySchema}".account WHERE account_code IN ($1, $2, $3)`,
@@ -101,19 +109,40 @@ export const cashDisbursementsService = {
       )
     }
 
-    const entityRows = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT id FROM public.entity WHERE schema_name = $1`, entitySchema
-    )
-    if (entityRows[0]) {
-      await auditLog.record({
-        entityId: entityRows[0].id,
-        userId,
-        action: "post",
-        tableName: "disbursement",
-        recordId: disbursementId,
-        newValues: { cv_number: dv.cv_number },
-      })
+    if (wtAmount > 0 && dv.tin) {
+      const bir = await getBirSettings(entityId)
+      const ewtRates = bir.ewtRates ?? []
+      const matchedRate = ewtRates.find(
+        (r: any) => Number(r.rate) === Number(dv.withholding_tax_rate)
+      )
+
+      await prisma.$queryRawUnsafe(
+        `INSERT INTO "${entitySchema}".withholding_tax_register (
+          ewt_type, bir_form_code, disbursement_id,
+          payee_name, payee_tin, payee_address,
+          base_amount, tax_rate, tax_withheld, withholding_date
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::date)`,
+        matchedRate?.ewtType || "expanded",
+        matchedRate?.birFormCode || "0605E",
+        dv.id,
+        dv.payee_name,
+        dv.tin,
+        dv.payee_address || null,
+        dv.amount,
+        dv.withholding_tax_rate,
+        wtAmount,
+        dv.cv_date
+      )
     }
+
+    await auditLog.record({
+      entityId,
+      userId,
+      action: "post",
+      tableName: "disbursement",
+      recordId: disbursementId,
+      newValues: { cv_number: dv.cv_number },
+    })
 
     return { journalEntry: entry }
   },

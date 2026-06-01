@@ -69,7 +69,7 @@ export async function createEntitySchema(schemaName: string): Promise<void> {
 
     CREATE TABLE IF NOT EXISTS "${schemaName}".number_series (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      series_type VARCHAR(10) NOT NULL CHECK (series_type IN ('JE','OR','CV','CD','CDV','PO','DV','PMT')),
+      series_type VARCHAR(10) NOT NULL CHECK (series_type IN ('JE','OR','CV','CD','CDV','PO','DV','PMT','INVOICE')),
       prefix VARCHAR(10) NOT NULL,
       starting_number INT NOT NULL DEFAULT 1,
       next_number INT NOT NULL DEFAULT 1,
@@ -113,6 +113,74 @@ export async function createEntitySchema(schemaName: string): Promise<void> {
       vat_amount DECIMAL(18,2) DEFAULT 0
     );
 
+    CREATE TABLE IF NOT EXISTS "${schemaName}".sales_invoice (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      invoice_number VARCHAR(30) NOT NULL UNIQUE,
+      student_id UUID REFERENCES "${schemaName}".student(id),
+      student_invoice_id UUID,
+      payor_name VARCHAR(200) NOT NULL,
+      payor_address TEXT,
+      payor_tin VARCHAR(20),
+      invoice_date DATE NOT NULL,
+      due_date DATE,
+      amount DECIMAL(18,2) NOT NULL,
+      vat_amount DECIMAL(18,2) DEFAULT 0,
+      vat_exempt_amount DECIMAL(18,2) DEFAULT 0,
+      zero_rated_amount DECIMAL(18,2) DEFAULT 0,
+      vat_rate DECIMAL(5,2) DEFAULT 12.00,
+      is_vat_exempt BOOLEAN DEFAULT TRUE,
+      bir_serial_number VARCHAR(50),
+      bir_accredited_printer_tin VARCHAR(20),
+      bir_permit_number VARCHAR(50),
+      status VARCHAR(10) DEFAULT 'active' CHECK (status IN ('active', 'void', 'cancelled')),
+      void_reason TEXT,
+      journal_entry_id UUID,
+      created_by UUID NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS "${schemaName}".sales_invoice_line (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      sales_invoice_id UUID NOT NULL REFERENCES "${schemaName}".sales_invoice(id),
+      fee_type VARCHAR(50) NOT NULL,
+      description TEXT NOT NULL,
+      amount DECIMAL(18,2) NOT NULL,
+      vat_sales DECIMAL(18,2) DEFAULT 0,
+      vat_exempt_sales DECIMAL(18,2) DEFAULT 0,
+      zero_rated_sales DECIMAL(18,2) DEFAULT 0,
+      vat_amount DECIMAL(18,2) DEFAULT 0
+    );
+
+    CREATE TABLE IF NOT EXISTS "${schemaName}".bir_serial_range (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      document_type VARCHAR(30) NOT NULL CHECK (document_type IN ('invoice', 'official_receipt', 'acknowledgment_receipt')),
+      series_prefix VARCHAR(10) NOT NULL,
+      start_number VARCHAR(20) NOT NULL,
+      end_number VARCHAR(20) NOT NULL,
+      accredited_printer_tin VARCHAR(20),
+      permit_number VARCHAR(50),
+      bir_serial_number VARCHAR(50),
+      is_active BOOLEAN DEFAULT TRUE,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE(document_type, series_prefix)
+    );
+
+    CREATE TABLE IF NOT EXISTS "${schemaName}".withholding_tax_register (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      ewt_type VARCHAR(20) NOT NULL CHECK (ewt_type IN ('expanded', 'creditable', 'final')),
+      bir_form_code VARCHAR(10) NOT NULL,
+      disbursement_id UUID REFERENCES "${schemaName}".disbursement(id),
+      payee_name VARCHAR(200) NOT NULL,
+      payee_tin VARCHAR(20) NOT NULL,
+      payee_address TEXT,
+      base_amount DECIMAL(18,2) NOT NULL,
+      tax_rate DECIMAL(5,2) NOT NULL,
+      tax_withheld DECIMAL(18,2) NOT NULL,
+      withholding_date DATE NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
     CREATE TABLE IF NOT EXISTS "${schemaName}".student (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       student_number VARCHAR(30) NOT NULL UNIQUE,
@@ -131,6 +199,8 @@ export async function createEntitySchema(schemaName: string): Promise<void> {
       student_id UUID NOT NULL REFERENCES "${schemaName}".student(id),
       fiscal_year_id UUID,
       term VARCHAR(50),
+      term_start_date DATE,
+      term_end_date DATE,
       invoice_date DATE NOT NULL,
       due_date DATE NOT NULL,
       total_amount DECIMAL(18,2) NOT NULL,
@@ -150,6 +220,17 @@ export async function createEntitySchema(schemaName: string): Promise<void> {
       discount_amount DECIMAL(18,2) DEFAULT 0
     );
 
+    CREATE TABLE IF NOT EXISTS "${schemaName}".revenue_recognition_entry (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      student_invoice_id UUID NOT NULL REFERENCES "${schemaName}".student_invoice(id),
+      recognition_date DATE NOT NULL,
+      amount DECIMAL(18,2) NOT NULL,
+      journal_entry_id UUID,
+      fiscal_period_id UUID,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE(student_invoice_id, fiscal_period_id)
+    );
+
     CREATE TABLE IF NOT EXISTS "${schemaName}".payment_transaction (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       transaction_number VARCHAR(30) NOT NULL UNIQUE,
@@ -162,6 +243,11 @@ export async function createEntitySchema(schemaName: string): Promise<void> {
       check_date DATE,
       bank_name VARCHAR(100),
       reference VARCHAR(50),
+      payor_name VARCHAR(200),
+      payor_address TEXT,
+      tin VARCHAR(20),
+      payment_type VARCHAR(30) DEFAULT 'tuition' CHECK (payment_type IN ('tuition','enrollment_deposit')),
+      deposit_status VARCHAR(20) CHECK (deposit_status IN ('held','applied','refunded')),
       journal_entry_id UUID,
       official_receipt_id UUID,
       created_at TIMESTAMPTZ DEFAULT NOW()
@@ -314,6 +400,71 @@ export async function createEntitySchema(schemaName: string): Promise<void> {
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
 
+    CREATE TABLE IF NOT EXISTS "${schemaName}".employee (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      employee_code VARCHAR(30) NOT NULL UNIQUE,
+      full_name VARCHAR(200) NOT NULL,
+      position VARCHAR(100),
+      department VARCHAR(100),
+      tin VARCHAR(20),
+      sss_number VARCHAR(20),
+      philhealth_number VARCHAR(20),
+      pagibig_number VARCHAR(20),
+      basic_pay DECIMAL(18,2) NOT NULL DEFAULT 0,
+      allowances DECIMAL(18,2) DEFAULT 0,
+      is_active BOOLEAN DEFAULT TRUE,
+      hire_date DATE,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS "${schemaName}".payroll_run (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      run_number VARCHAR(30) NOT NULL UNIQUE,
+      run_date DATE NOT NULL,
+      pay_period_start DATE NOT NULL,
+      pay_period_end DATE NOT NULL,
+      status VARCHAR(20) DEFAULT 'draft' CHECK (status IN ('draft', 'posted', 'void')),
+      total_gross_pay DECIMAL(18,2) DEFAULT 0,
+      total_deductions DECIMAL(18,2) DEFAULT 0,
+      total_net_pay DECIMAL(18,2) DEFAULT 0,
+      journal_entry_id UUID,
+      created_by UUID NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS "${schemaName}".payroll_run_line (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      payroll_run_id UUID NOT NULL REFERENCES "${schemaName}".payroll_run(id),
+      employee_id UUID NOT NULL REFERENCES "${schemaName}".employee(id),
+      basic_pay DECIMAL(18,2) NOT NULL,
+      allowances DECIMAL(18,2) DEFAULT 0,
+      gross_pay DECIMAL(18,2) NOT NULL,
+      sss_employee DECIMAL(18,2) DEFAULT 0,
+      sss_employer DECIMAL(18,2) DEFAULT 0,
+      philhealth_employee DECIMAL(18,2) DEFAULT 0,
+      philhealth_employer DECIMAL(18,2) DEFAULT 0,
+      pagibig_employee DECIMAL(18,2) DEFAULT 0,
+      pagibig_employer DECIMAL(18,2) DEFAULT 0,
+      withholding_tax DECIMAL(18,2) DEFAULT 0,
+      total_deductions DECIMAL(18,2) DEFAULT 0,
+      net_pay DECIMAL(18,2) NOT NULL,
+      thirteenth_month_accrual DECIMAL(18,2) DEFAULT 0
+    );
+
+    CREATE TABLE IF NOT EXISTS "${schemaName}".budget (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      fiscal_year_id UUID NOT NULL,
+      account_id UUID NOT NULL REFERENCES "${schemaName}".account(id),
+      budgeted_amount DECIMAL(18,2) NOT NULL DEFAULT 0,
+      notes TEXT,
+      created_by UUID NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE(fiscal_year_id, account_id)
+    );
+
     INSERT INTO "${schemaName}".account (account_code, account_name, account_type, normal_balance, level) VALUES
       ('10000', 'ASSETS', 'asset', 'debit', 0),
       ('11000', 'Current Assets', 'asset', 'debit', 1),
@@ -323,6 +474,9 @@ export async function createEntitySchema(schemaName: string): Promise<void> {
       ('11200', 'Accounts Receivable', 'asset', 'debit', 2),
       ('11210', 'Accounts Receivable - Students', 'asset', 'debit', 3),
       ('11300', 'Allowance for Doubtful Accounts', 'contra_asset', 'credit', 3),
+      ('11400', 'Prepaid Expenses', 'asset', 'debit', 3),
+      ('11500', 'Inventories / Supplies', 'asset', 'debit', 3),
+      ('11600', 'Input VAT', 'asset', 'debit', 3),
       ('12000', 'Non-Current Assets', 'asset', 'debit', 1),
       ('12100', 'Property, Plant, and Equipment', 'asset', 'debit', 2),
       ('12110', 'Land', 'asset', 'debit', 3),
@@ -330,6 +484,9 @@ export async function createEntitySchema(schemaName: string): Promise<void> {
       ('12130', 'Accumulated Depreciation - Buildings', 'contra_asset', 'credit', 3),
       ('12140', 'Office Equipment', 'asset', 'debit', 3),
       ('12150', 'Accumulated Depreciation - Equipment', 'contra_asset', 'credit', 3),
+      ('12160', 'Vehicles', 'asset', 'debit', 3),
+      ('12170', 'Accumulated Depreciation - Vehicles', 'contra_asset', 'credit', 3),
+      ('12180', 'Library Books & Collections', 'asset', 'debit', 3),
       ('20000', 'LIABILITIES', 'liability', 'credit', 0),
       ('21000', 'Current Liabilities', 'liability', 'credit', 1),
       ('21100', 'Accounts Payable', 'liability', 'credit', 2),
@@ -338,17 +495,26 @@ export async function createEntitySchema(schemaName: string): Promise<void> {
       ('21300', 'Unearned Tuition', 'liability', 'credit', 3),
       ('21400', 'VAT Payable', 'liability', 'credit', 3),
       ('21500', 'Withholding Tax Payable', 'liability', 'credit', 3),
+      ('21600', 'SSS/PhilHealth/Pag-IBIG Payable', 'liability', 'credit', 3),
+      ('21700', '13th Month Pay Payable', 'liability', 'credit', 3),
+      ('21800', 'Deferred Revenue - Enrollment Deposits', 'liability', 'credit', 3),
+      ('21900', 'Output VAT', 'liability', 'credit', 3),
       ('22000', 'Non-Current Liabilities', 'liability', 'credit', 1),
       ('22100', 'Loans Payable', 'liability', 'credit', 3),
       ('30000', 'EQUITY', 'equity', 'credit', 0),
       ('31100', 'Capital', 'equity', 'credit', 3),
       ('31200', 'Retained Earnings', 'equity', 'credit', 3),
+      ('31300', 'Fund Balance', 'equity', 'credit', 3),
       ('39000', 'Income Summary', 'equity', 'credit', 3),
       ('40000', 'REVENUE', 'revenue', 'credit', 0),
       ('41100', 'Tuition Revenue', 'revenue', 'credit', 3),
       ('41200', 'Miscellaneous Fees', 'revenue', 'credit', 3),
       ('41300', 'Laboratory Fees', 'revenue', 'credit', 3),
       ('41400', 'Other Income', 'revenue', 'credit', 3),
+      ('41500', 'Gain on Asset Disposal', 'revenue', 'credit', 3),
+      ('41600', 'Government Grants & Subsidies', 'revenue', 'credit', 3),
+      ('41700', 'Donation Revenue', 'revenue', 'credit', 3),
+      ('41800', 'Rental Income', 'revenue', 'credit', 3),
       ('50000', 'EXPENSES', 'expense', 'debit', 0),
       ('51100', 'Salaries and Wages', 'expense', 'debit', 3),
       ('51200', 'Utilities Expense', 'expense', 'debit', 3),
@@ -357,17 +523,190 @@ export async function createEntitySchema(schemaName: string): Promise<void> {
       ('51500', 'Supplies Expense', 'expense', 'debit', 3),
       ('51600', 'Professional Fees', 'expense', 'debit', 3),
       ('51700', 'Taxes and Licenses', 'expense', 'debit', 3),
-      ('51800', 'Miscellaneous Expense', 'expense', 'debit', 3);
+      ('51800', 'Miscellaneous Expense', 'expense', 'debit', 3),
+      ('51900', 'Loss on Asset Disposal', 'expense', 'debit', 3),
+      ('52000', 'SSS/PhilHealth/Pag-IBIG Contributions', 'expense', 'debit', 3),
+      ('52100', '13th Month Pay Expense', 'expense', 'debit', 3),
+      ('52200', 'Insurance Expense', 'expense', 'debit', 3),
+      ('52300', 'Repairs & Maintenance', 'expense', 'debit', 3),
+      ('52400', 'Interest Expense', 'expense', 'debit', 3),
+      ('52500', 'Training & Development', 'expense', 'debit', 3);
 
     INSERT INTO "${schemaName}".number_series (series_type, prefix, starting_number, next_number) VALUES
       ('JE', 'JE', 1, 1),
       ('OR', 'OR', 1, 1),
       ('CV', 'CV', 1, 1),
       ('CD', 'CD', 1, 1),
-      ('PMT', 'PMT', 1, 1);
+      ('PMT', 'PMT', 1, 1),
+      ('INVOICE', 'INV', 1, 1);
   `
 
   for (const stmt of sql.split(";")) {
+    const trimmed = stmt.trim()
+    if (trimmed.length > 0) {
+      await prisma.$executeRawUnsafe(trimmed + ";")
+    }
+  }
+
+  const migrations = `
+    ALTER TABLE "${schemaName}".student_invoice ADD COLUMN IF NOT EXISTS term_start_date DATE;
+    ALTER TABLE "${schemaName}".student_invoice ADD COLUMN IF NOT EXISTS term_end_date DATE;
+    ALTER TABLE "${schemaName}".payment_transaction ADD COLUMN IF NOT EXISTS payor_name VARCHAR(200);
+    ALTER TABLE "${schemaName}".payment_transaction ADD COLUMN IF NOT EXISTS payor_address TEXT;
+    ALTER TABLE "${schemaName}".payment_transaction ADD COLUMN IF NOT EXISTS tin VARCHAR(20);
+    ALTER TABLE "${schemaName}".payment_transaction ADD COLUMN IF NOT EXISTS payment_type VARCHAR(30) DEFAULT 'tuition';
+    ALTER TABLE "${schemaName}".payment_transaction ADD COLUMN IF NOT EXISTS deposit_status VARCHAR(20);
+
+    CREATE TABLE IF NOT EXISTS "${schemaName}".revenue_recognition_entry (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      student_invoice_id UUID NOT NULL REFERENCES "${schemaName}".student_invoice(id),
+      recognition_date DATE NOT NULL,
+      amount DECIMAL(18,2) NOT NULL,
+      journal_entry_id UUID,
+      fiscal_period_id UUID,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE(student_invoice_id, fiscal_period_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS "${schemaName}".sales_invoice (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      invoice_number VARCHAR(30) NOT NULL UNIQUE,
+      student_id UUID REFERENCES "${schemaName}".student(id),
+      student_invoice_id UUID,
+      payor_name VARCHAR(200) NOT NULL,
+      payor_address TEXT,
+      payor_tin VARCHAR(20),
+      invoice_date DATE NOT NULL,
+      due_date DATE,
+      amount DECIMAL(18,2) NOT NULL,
+      vat_amount DECIMAL(18,2) DEFAULT 0,
+      vat_exempt_amount DECIMAL(18,2) DEFAULT 0,
+      zero_rated_amount DECIMAL(18,2) DEFAULT 0,
+      vat_rate DECIMAL(5,2) DEFAULT 12.00,
+      is_vat_exempt BOOLEAN DEFAULT TRUE,
+      bir_serial_number VARCHAR(50),
+      bir_accredited_printer_tin VARCHAR(20),
+      bir_permit_number VARCHAR(50),
+      status VARCHAR(10) DEFAULT 'active' CHECK (status IN ('active', 'void', 'cancelled')),
+      void_reason TEXT,
+      journal_entry_id UUID,
+      created_by UUID NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS "${schemaName}".sales_invoice_line (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      sales_invoice_id UUID NOT NULL REFERENCES "${schemaName}".sales_invoice(id),
+      fee_type VARCHAR(50) NOT NULL,
+      description TEXT NOT NULL,
+      amount DECIMAL(18,2) NOT NULL,
+      vat_sales DECIMAL(18,2) DEFAULT 0,
+      vat_exempt_sales DECIMAL(18,2) DEFAULT 0,
+      zero_rated_sales DECIMAL(18,2) DEFAULT 0,
+      vat_amount DECIMAL(18,2) DEFAULT 0
+    );
+
+    CREATE TABLE IF NOT EXISTS "${schemaName}".bir_serial_range (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      document_type VARCHAR(30) NOT NULL CHECK (document_type IN ('invoice', 'official_receipt', 'acknowledgment_receipt')),
+      series_prefix VARCHAR(10) NOT NULL,
+      start_number VARCHAR(20) NOT NULL,
+      end_number VARCHAR(20) NOT NULL,
+      accredited_printer_tin VARCHAR(20),
+      permit_number VARCHAR(50),
+      bir_serial_number VARCHAR(50),
+      is_active BOOLEAN DEFAULT TRUE,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE(document_type, series_prefix)
+    );
+
+    CREATE TABLE IF NOT EXISTS "${schemaName}".withholding_tax_register (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      ewt_type VARCHAR(20) NOT NULL CHECK (ewt_type IN ('expanded', 'creditable', 'final')),
+      bir_form_code VARCHAR(10) NOT NULL,
+      disbursement_id UUID REFERENCES "${schemaName}".disbursement(id),
+      payee_name VARCHAR(200) NOT NULL,
+      payee_tin VARCHAR(20) NOT NULL,
+      payee_address TEXT,
+      base_amount DECIMAL(18,2) NOT NULL,
+      tax_rate DECIMAL(5,2) NOT NULL,
+      tax_withheld DECIMAL(18,2) NOT NULL,
+      withholding_date DATE NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    ALTER TABLE "${schemaName}".official_receipt ADD COLUMN IF NOT EXISTS bir_serial_number VARCHAR(50);
+    ALTER TABLE "${schemaName}".official_receipt ADD COLUMN IF NOT EXISTS bir_accredited_printer_tin VARCHAR(20);
+    ALTER TABLE "${schemaName}".official_receipt ADD COLUMN IF NOT EXISTS bir_permit_number VARCHAR(50);
+
+    CREATE TABLE IF NOT EXISTS "${schemaName}".employee (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      employee_code VARCHAR(30) NOT NULL UNIQUE,
+      full_name VARCHAR(200) NOT NULL,
+      position VARCHAR(100),
+      department VARCHAR(100),
+      tin VARCHAR(20),
+      sss_number VARCHAR(20),
+      philhealth_number VARCHAR(20),
+      pagibig_number VARCHAR(20),
+      basic_pay DECIMAL(18,2) NOT NULL DEFAULT 0,
+      allowances DECIMAL(18,2) DEFAULT 0,
+      is_active BOOLEAN DEFAULT TRUE,
+      hire_date DATE,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS "${schemaName}".payroll_run (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      run_number VARCHAR(30) NOT NULL UNIQUE,
+      run_date DATE NOT NULL,
+      pay_period_start DATE NOT NULL,
+      pay_period_end DATE NOT NULL,
+      status VARCHAR(20) DEFAULT 'draft' CHECK (status IN ('draft', 'posted', 'void')),
+      total_gross_pay DECIMAL(18,2) DEFAULT 0,
+      total_deductions DECIMAL(18,2) DEFAULT 0,
+      total_net_pay DECIMAL(18,2) DEFAULT 0,
+      journal_entry_id UUID,
+      created_by UUID NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS "${schemaName}".payroll_run_line (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      payroll_run_id UUID NOT NULL REFERENCES "${schemaName}".payroll_run(id),
+      employee_id UUID NOT NULL REFERENCES "${schemaName}".employee(id),
+      basic_pay DECIMAL(18,2) NOT NULL,
+      allowances DECIMAL(18,2) DEFAULT 0,
+      gross_pay DECIMAL(18,2) NOT NULL,
+      sss_employee DECIMAL(18,2) DEFAULT 0,
+      sss_employer DECIMAL(18,2) DEFAULT 0,
+      philhealth_employee DECIMAL(18,2) DEFAULT 0,
+      philhealth_employer DECIMAL(18,2) DEFAULT 0,
+      pagibig_employee DECIMAL(18,2) DEFAULT 0,
+      pagibig_employer DECIMAL(18,2) DEFAULT 0,
+      withholding_tax DECIMAL(18,2) DEFAULT 0,
+      total_deductions DECIMAL(18,2) DEFAULT 0,
+      net_pay DECIMAL(18,2) NOT NULL,
+      thirteenth_month_accrual DECIMAL(18,2) DEFAULT 0
+    );
+
+    CREATE TABLE IF NOT EXISTS "${schemaName}".budget (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      fiscal_year_id UUID NOT NULL,
+      account_id UUID NOT NULL REFERENCES "${schemaName}".account(id),
+      budgeted_amount DECIMAL(18,2) NOT NULL DEFAULT 0,
+      notes TEXT,
+      created_by UUID NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE(fiscal_year_id, account_id)
+    );
+  `
+
+  for (const stmt of migrations.split(";")) {
     const trimmed = stmt.trim()
     if (trimmed.length > 0) {
       await prisma.$executeRawUnsafe(trimmed + ";")
