@@ -17,7 +17,6 @@
     "test:run": "vitest run"
   },
   "dependencies": {
-    "@next/swc-win32-x64-msvc": "^16.2.6",
     "@prisma/client": "^5.14.0",
     "@radix-ui/react-dialog": "^1.0.5",
     "@radix-ui/react-dropdown-menu": "^2.0.6",

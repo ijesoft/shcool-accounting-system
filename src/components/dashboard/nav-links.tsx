@@ -5,18 +5,19 @@ import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 
 const links = [
-  { href: "/dashboard", label: "Dashboard", icon: "📊" },
-  { href: "/dashboard/accounts", label: "Chart of Accounts", icon: "📋" },
-  { href: "/dashboard/journal-entries", label: "Journal Entries", icon: "📝" },
-  { href: "/dashboard/bank-reconciliation", label: "Bank Reconciliation", icon: "🔄" },
-  { href: "/dashboard/cash-receipts", label: "Cash Receipts", icon: "💰" },
-  { href: "/dashboard/cash-disbursements", label: "Cash Disbursements", icon: "💳" },
-  { href: "/dashboard/official-receipts", label: "Official Receipts", icon: "🧾" },
-  { href: "/dashboard/student-accounts", label: "Student Accounts", icon: "👨‍🎓" },
-  { href: "/dashboard/vendor-accounts", label: "Vendor Accounts", icon: "🏢" },
-  { href: "/dashboard/fixed-assets", label: "Fixed Assets", icon: "🏗️" },
-  { href: "/dashboard/reports", label: "Reports", icon: "📈" },
-  { href: "/dashboard/admin", label: "Admin", icon: "⚙️" },
+  { href: "/", label: "Dashboard", icon: "📊" },
+  { href: "/accounts", label: "Chart of Accounts", icon: "📋" },
+  { href: "/journal-entries", label: "Journal Entries", icon: "📝" },
+  { href: "/bank-reconciliation", label: "Bank Reconciliation", icon: "🔄" },
+  { href: "/cash-receipts", label: "Cash Receipts", icon: "💰" },
+  { href: "/cash-disbursements", label: "Cash Disbursements", icon: "💳" },
+  { href: "/official-receipts", label: "Official Receipts", icon: "🧾" },
+  { href: "/student-accounts", label: "Student Accounts", icon: "👨‍🎓" },
+  { href: "/vendor-accounts", label: "Vendor Accounts", icon: "🏢" },
+  { href: "/fixed-assets", label: "Fixed Assets", icon: "🏗️" },
+  { href: "/reports", label: "Reports", icon: "📈" },
+  { href: "/entities", label: "Branches", icon: "🏫" },
+  { href: "/admin", label: "Admin", icon: "⚙️" },
 ]
 
 export function NavLinks() {

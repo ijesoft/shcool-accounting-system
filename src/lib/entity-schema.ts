@@ -69,7 +69,7 @@ export async function createEntitySchema(schemaName: string): Promise<void> {
 
     CREATE TABLE IF NOT EXISTS "${schemaName}".number_series (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      series_type VARCHAR(10) NOT NULL CHECK (series_type IN ('JE','OR','CV','CD','CDV','PO','DV')),
+      series_type VARCHAR(10) NOT NULL CHECK (series_type IN ('JE','OR','CV','CD','CDV','PO','DV','PMT')),
       prefix VARCHAR(10) NOT NULL,
       starting_number INT NOT NULL DEFAULT 1,
       next_number INT NOT NULL DEFAULT 1,
@@ -363,10 +363,16 @@ export async function createEntitySchema(schemaName: string): Promise<void> {
       ('JE', 'JE', 1, 1),
       ('OR', 'OR', 1, 1),
       ('CV', 'CV', 1, 1),
-      ('CD', 'CD', 1, 1);
+      ('CD', 'CD', 1, 1),
+      ('PMT', 'PMT', 1, 1);
   `
 
-  await prisma.$executeRawUnsafe(sql)
+  for (const stmt of sql.split(";")) {
+    const trimmed = stmt.trim()
+    if (trimmed.length > 0) {
+      await prisma.$executeRawUnsafe(trimmed + ";")
+    }
+  }
 }
 
 export async function dropEntitySchema(schemaName: string): Promise<void> {

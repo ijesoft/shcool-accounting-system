@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic"
 export default async function StudentAccountsPage() {
   const session = await getSession()
   if (!session.userId) redirect("/login")
-  if (!hasPermission(session.roleName, "student_accounts", "read")) redirect("/dashboard")
+  if (!hasPermission(session.roleName, "student_accounts", "read")) redirect("/")
   if (!session.entityId) return <p className="p-6 text-muted-foreground">Please select an entity.</p>
 
   const entity = await prisma.entity.findUnique({ where: { id: session.entityId } })
@@ -38,7 +38,7 @@ export default async function StudentAccountsPage() {
               {students.map((s: any) => (
                 <tr key={s.id} className="border-b hover:bg-muted/50">
                   <td className="p-3 font-mono text-xs">
-                    <Link href={`/dashboard/student-accounts/${s.id}`} className="text-blue-600 hover:underline">{s.student_number}</Link>
+                    <Link href={`/student-accounts/${s.id}`} className="text-blue-600 hover:underline">{s.student_number}</Link>
                   </td>
                   <td className="p-3">{s.full_name}</td>
                   <td className="p-3 text-xs">{s.course || s.grade_level || "—"}</td>

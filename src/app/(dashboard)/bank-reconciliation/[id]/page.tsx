@@ -28,7 +28,7 @@ export default async function BankReconciliationDetailPage({ params }: { params:
   const { id } = await params
   const session = await getSession()
   if (!session.userId) redirect("/login")
-  if (!hasPermission(session.roleName, "bank_reconciliation", "read")) redirect("/dashboard")
+  if (!hasPermission(session.roleName, "bank_reconciliation", "read")) redirect("/")
   if (!session.entityId) return <p className="p-6 text-muted-foreground">Please select an entity.</p>
 
   const entity = await prisma.entity.findUnique({ where: { id: session.entityId } })

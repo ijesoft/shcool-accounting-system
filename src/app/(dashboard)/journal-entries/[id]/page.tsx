@@ -33,8 +33,8 @@ export default async function JournalEntryDetailPage({ params }: { params: Promi
   const { id } = await params
   const session = await getSession()
   if (!session.userId) redirect("/login")
-  if (!hasPermission(session.roleName, "journal_entries", "read")) redirect("/dashboard")
-  if (!session.entityId) redirect("/dashboard/journal-entries")
+  if (!hasPermission(session.roleName, "journal_entries", "read")) redirect("/")
+  if (!session.entityId) redirect("/journal-entries")
 
   const entry = await getEntry(session.entityId, id)
   if (!entry) return <p className="p-6 text-muted-foreground">Entry not found.</p>
@@ -50,12 +50,12 @@ export default async function JournalEntryDetailPage({ params }: { params: Promi
           {entry.status === "draft" && (
             <>
               <PostEntryButton entryId={id} />
-              <Link href={`/dashboard/journal-entries/${id}/edit`}>
+              <Link href={`/journal-entries/${id}/edit`}>
                 <Button variant="outline">Edit</Button>
               </Link>
             </>
           )}
-          <Link href="/dashboard/journal-entries">
+          <Link href="/journal-entries">
             <Button variant="ghost">Back</Button>
           </Link>
         </div>

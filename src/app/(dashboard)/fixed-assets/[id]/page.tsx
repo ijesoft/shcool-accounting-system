@@ -11,7 +11,7 @@ export default async function FixedAssetDetailPage({ params }: { params: Promise
   const { id } = await params
   const session = await getSession()
   if (!session.userId) redirect("/login")
-  if (!hasPermission(session.roleName, "fixed_assets", "read")) redirect("/dashboard")
+  if (!hasPermission(session.roleName, "fixed_assets", "read")) redirect("/")
   if (!session.entityId) return <p className="p-6 text-muted-foreground">Please select an entity.</p>
 
   const entity = await prisma.entity.findUnique({ where: { id: session.entityId } })

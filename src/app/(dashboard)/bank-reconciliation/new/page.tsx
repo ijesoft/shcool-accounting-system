@@ -65,7 +65,7 @@ export default function NewBankReconciliationPage() {
         throw new Error(data.error?.message || "Failed to start reconciliation")
       }
       const result = await res.json()
-      router.push(`/dashboard/bank-reconciliation/${result.data.id}`)
+      router.push(`/bank-reconciliation/${result.data.id}`)
       router.refresh()
     } catch (err: any) {
       setError(err.message)

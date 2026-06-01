@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic"
 export default async function FixedAssetsPage() {
   const session = await getSession()
   if (!session.userId) redirect("/login")
-  if (!hasPermission(session.roleName, "fixed_assets", "read")) redirect("/dashboard")
+  if (!hasPermission(session.roleName, "fixed_assets", "read")) redirect("/")
   if (!session.entityId) return <p className="p-6 text-muted-foreground">Please select an entity.</p>
 
   const entity = await prisma.entity.findUnique({ where: { id: session.entityId } })
@@ -23,7 +23,7 @@ export default async function FixedAssetsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Fixed Assets</h1>
-        <Link href="/dashboard/fixed-assets/new"><Button>Capitalize Asset</Button></Link>
+        <Link href="/fixed-assets/new"><Button>Capitalize Asset</Button></Link>
       </div>
       <div className="rounded-lg border bg-card">
         <div className="overflow-x-auto">
@@ -44,7 +44,7 @@ export default async function FixedAssetsPage() {
               {assets.map((a: any) => (
                 <tr key={a.id} className="border-b hover:bg-muted/50">
                   <td className="p-3 font-mono text-xs">
-                    <Link href={`/dashboard/fixed-assets/${a.id}`} className="text-blue-600 hover:underline">{a.asset_code}</Link>
+                    <Link href={`/fixed-assets/${a.id}`} className="text-blue-600 hover:underline">{a.asset_code}</Link>
                   </td>
                   <td className="p-3">{a.asset_name}</td>
                   <td className="p-3 text-xs capitalize">{a.asset_category}</td>

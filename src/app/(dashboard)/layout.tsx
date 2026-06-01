@@ -14,7 +14,11 @@ export default async function DashboardLayout({
 
   return (
     <div className="flex h-screen">
-      <Sidebar fullName={session.fullName} roleName={session.roleName} />
+      <Sidebar
+        fullName={session.fullName}
+        roleName={session.roleName}
+        entityId={session.entityId}
+      />
       <main className="flex-1 overflow-y-auto bg-gray-50 p-6">
         {children}
       </main>

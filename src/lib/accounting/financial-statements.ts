@@ -18,7 +18,12 @@ export const financialStatementEngine = {
       )
       const totalDebits = results.reduce((s: number, r: any) => s + Number(r.total_debits), 0)
       const totalCredits = results.reduce((s: number, r: any) => s + Number(r.total_credits), 0)
-      return { accounts: results, totalDebits, totalCredits, balanced: Math.abs(totalDebits - totalCredits) < 0.01 }
+      let runningBalance = 0
+      const accountsWithRunning = results.map((r: any) => {
+        runningBalance += Number(r.total_debits) - Number(r.total_credits)
+        return { ...r, runningBalance }
+      })
+      return { accounts: accountsWithRunning, totalDebits, totalCredits, balanced: Math.abs(totalDebits - totalCredits) < 0.01 }
     }
 
     const results = await prisma.$queryRawUnsafe<any[]>(
@@ -34,7 +39,12 @@ export const financialStatementEngine = {
     )
     const totalDebits = results.reduce((s: number, r: any) => s + Number(r.total_debits), 0)
     const totalCredits = results.reduce((s: number, r: any) => s + Number(r.total_credits), 0)
-    return { accounts: results, totalDebits, totalCredits, balanced: Math.abs(totalDebits - totalCredits) < 0.01 }
+    let runningBalance = 0
+    const accountsWithRunning = results.map((r: any) => {
+      runningBalance += Number(r.total_debits) - Number(r.total_credits)
+      return { ...r, runningBalance }
+    })
+    return { accounts: accountsWithRunning, totalDebits, totalCredits, balanced: Math.abs(totalDebits - totalCredits) < 0.01 }
   },
 
   async incomeStatement(entitySchema: string, fromDate: string, toDate: string) {
@@ -92,42 +102,106 @@ export const financialStatementEngine = {
       fromDate, toDate
     )
 
-    const nonCashChanges = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT a.account_code, a.account_name, a.account_type,
-              COALESCE(SUM(jel.debit), 0) as total_debits,
-              COALESCE(SUM(jel.credit), 0) as total_credits
+    const depreciation = await prisma.$queryRawUnsafe<any[]>(
+      `SELECT COALESCE(SUM(jel.debit), 0) as amount
        FROM "${entitySchema}".account a
        JOIN "${entitySchema}".journal_entry_line jel ON jel.account_id = a.id
        JOIN "${entitySchema}".journal_entry je ON je.id = jel.journal_entry_id
          AND je.status = 'posted'
          AND je.entry_date >= $1::date AND je.entry_date <= $2::date
-       WHERE a.account_type IN ('asset', 'liability', 'equity')
-       GROUP BY a.id, a.account_code, a.account_name, a.account_type
-       ORDER BY a.account_code`,
+       WHERE a.account_code = '51400'`,
+      fromDate, toDate
+    )
+
+    const workingCapitalChanges = await prisma.$queryRawUnsafe<any[]>(
+      `SELECT a.account_code, a.account_name,
+              COALESCE(SUM(jel.debit - jel.credit), 0) as net_change
+       FROM "${entitySchema}".account a
+       JOIN "${entitySchema}".journal_entry_line jel ON jel.account_id = a.id
+       JOIN "${entitySchema}".journal_entry je ON je.id = jel.journal_entry_id
+         AND je.status = 'posted'
+         AND je.entry_date >= $1::date AND je.entry_date <= $2::date
+       WHERE a.account_code IN ('11100', '11200', '11300', '11400', '21100', '21200', '21300')
+       GROUP BY a.id, a.account_code, a.account_name`,
+      fromDate, toDate
+    )
+
+    const fixedAssetChanges = await prisma.$queryRawUnsafe<any[]>(
+      `SELECT a.account_code, a.account_name,
+              COALESCE(SUM(jel.debit - jel.credit), 0) as net_change
+       FROM "${entitySchema}".account a
+       JOIN "${entitySchema}".journal_entry_line jel ON jel.account_id = a.id
+       JOIN "${entitySchema}".journal_entry je ON je.id = jel.journal_entry_id
+         AND je.status = 'posted'
+         AND je.entry_date >= $1::date AND je.entry_date <= $2::date
+       WHERE a.account_code IN ('12120', '12140')
+       GROUP BY a.id, a.account_code, a.account_name`,
+      fromDate, toDate
+    )
+
+    const financingChanges = await prisma.$queryRawUnsafe<any[]>(
+      `SELECT a.account_code, a.account_name,
+              COALESCE(SUM(jel.debit - jel.credit), 0) as net_change
+       FROM "${entitySchema}".account a
+       JOIN "${entitySchema}".journal_entry_line jel ON jel.account_id = a.id
+       JOIN "${entitySchema}".journal_entry je ON je.id = jel.journal_entry_id
+         AND je.status = 'posted'
+         AND je.entry_date >= $1::date AND je.entry_date <= $2::date
+       WHERE a.account_code IN ('21100', '21200', '21300', '31100', '31200', '31300')
+       GROUP BY a.id, a.account_code, a.account_name`,
       fromDate, toDate
     )
 
     const income = Number(netIncome[0]?.amount || 0)
+    const depAmount = Number(depreciation[0]?.amount || 0)
+
     const sections: { operating: CashFlowEntry[]; investing: CashFlowEntry[]; financing: CashFlowEntry[] } = {
-      operating: [{ section: "operating", label: "Net Income", amount: income }],
+      operating: [
+        { section: "operating", label: "Net Income", amount: income },
+        { section: "operating", label: "Depreciation", amount: depAmount },
+      ],
       investing: [],
       financing: [],
     }
 
-    for (const row of nonCashChanges) {
-      const debits = Number(row.total_debits)
-      const credits = Number(row.total_credits)
-      const netChange = debits - credits
-      if (Math.abs(netChange) < 0.01) continue
+    for (const row of workingCapitalChanges) {
+      const change = Number(row.net_change)
+      if (Math.abs(change) < 0.01) continue
+      const accountCode = row.account_code
+      const isAsset = accountCode.startsWith("1")
+      const sign = isAsset ? -1 : 1
+      sections.operating.push({
+        section: "operating",
+        label: `${row.account_name} (${accountCode})`,
+        amount: change * sign,
+        accountCode,
+      })
+    }
 
-      const entry: CashFlowEntry = {
-        section: row.account_type === "asset" ? "investing" : "financing",
+    for (const row of fixedAssetChanges) {
+      const change = Number(row.net_change)
+      if (Math.abs(change) < 0.01) continue
+      sections.investing.push({
+        section: "investing",
         label: `${row.account_name} (${row.account_code})`,
-        amount: netChange,
+        amount: -change,
         accountCode: row.account_code,
-      }
-      if (entry.section === "investing") sections.investing.push(entry)
-      else sections.financing.push(entry)
+      })
+    }
+
+    for (const row of financingChanges) {
+      const change = Number(row.net_change)
+      if (Math.abs(change) < 0.01) continue
+      const accountCode = row.account_code
+      const isLiability = accountCode.startsWith("2")
+      const isEquity = accountCode.startsWith("3")
+      const sign = isLiability || isEquity ? 1 : -1
+      sections.financing.push({
+        section: "financing",
+        label: `${row.account_name} (${accountCode})`,
+        amount: change * sign,
+        accountCode,
+      })
     }
 
     const opTotal = sections.operating.reduce((s, e) => s + e.amount, 0)

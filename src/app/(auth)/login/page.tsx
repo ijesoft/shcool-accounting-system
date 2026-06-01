@@ -32,7 +32,7 @@ export default function LoginPage() {
         return
       }
 
-      router.push("/dashboard")
+      router.push("/")
     } catch {
       setError("An unexpected error occurred")
     } finally {

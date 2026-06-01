@@ -10,7 +10,7 @@ export default async function OfficialReceiptDetailPage({ params }: { params: Pr
   const { id } = await params
   const session = await getSession()
   if (!session.userId) redirect("/login")
-  if (!hasPermission(session.roleName, "official_receipts", "read")) redirect("/dashboard")
+  if (!hasPermission(session.roleName, "official_receipts", "read")) redirect("/")
   if (!session.entityId) return <p className="p-6 text-muted-foreground">Please select an entity.</p>
 
   const entity = await prisma.entity.findUnique({ where: { id: session.entityId } })
@@ -27,7 +27,7 @@ export default async function OfficialReceiptDetailPage({ params }: { params: Pr
 
   return (
     <div className="space-y-6 max-w-2xl">
-      <Link href="/dashboard/official-receipts" className="text-sm text-blue-600 hover:underline">&larr; Back to Official Receipts</Link>
+      <Link href="/official-receipts" className="text-sm text-blue-600 hover:underline">&larr; Back to Official Receipts</Link>
       <h1 className="text-3xl font-bold">Official Receipt {or.or_number}</h1>
       <div className="rounded-lg border bg-card p-6 space-y-4">
         <div className="grid grid-cols-2 gap-4 text-sm">

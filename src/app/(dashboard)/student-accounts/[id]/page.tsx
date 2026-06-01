@@ -11,7 +11,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
   const { id } = await params
   const session = await getSession()
   if (!session.userId) redirect("/login")
-  if (!hasPermission(session.roleName, "student_accounts", "read")) redirect("/dashboard")
+  if (!hasPermission(session.roleName, "student_accounts", "read")) redirect("/")
   if (!session.entityId) return <p className="p-6 text-muted-foreground">Please select an entity.</p>
 
   const entity = await prisma.entity.findUnique({ where: { id: session.entityId } })
@@ -26,7 +26,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
 
   return (
     <div className="space-y-6">
-      <Link href="/dashboard/student-accounts" className="text-sm text-blue-600 hover:underline">&larr; Back to Student Accounts</Link>
+      <Link href="/student-accounts" className="text-sm text-blue-600 hover:underline">&larr; Back to Student Accounts</Link>
       <h1 className="text-3xl font-bold">{student.full_name}</h1>
       <div className="grid grid-cols-2 gap-4 text-sm">
         <div><span className="font-medium">Student #:</span> {student.student_number}</div>

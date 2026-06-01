@@ -122,6 +122,101 @@ export const bankReconciliationService = {
     return created
   },
 
+  async autoMatch(entitySchema: string, reconciliationId: string) {
+    const recs = await prisma.$queryRawUnsafe<any[]>(
+      `SELECT * FROM "${entitySchema}".bank_reconciliation WHERE id = $1`, reconciliationId
+    )
+    if (!recs[0]) throw new Error("Reconciliation not found")
+
+    const statementItems = await prisma.$queryRawUnsafe<any[]>(
+      `SELECT * FROM "${entitySchema}".reconciliation_item
+       WHERE reconciliation_id = $1 AND is_cleared = FALSE AND type IN ('deposit_in_transit', 'outstanding_check')`,
+      reconciliationId
+    )
+
+    const bookItems = await prisma.$queryRawUnsafe<any[]>(
+      `SELECT jel.id, jel.account_id, jel.debit, jel.credit, je.entry_date, je.entry_number
+       FROM "${entitySchema}".journal_entry_line jel
+       JOIN "${entitySchema}".journal_entry je ON je.id = jel.journal_entry_id
+       JOIN "${entitySchema}".account a ON a.id = jel.account_id
+       WHERE je.status = 'posted'
+         AND a.account_code = '11120'
+         AND je.entry_date <= (SELECT statement_date FROM "${entitySchema}".bank_reconciliation WHERE id = $1)` as any,
+      reconciliationId
+    )
+
+    const matchedStatementIds: string[] = []
+    const matchedBookIds: string[] = []
+
+    for (const stmt of statementItems) {
+      const stmtAmount = Number(stmt.amount)
+      const matched = bookItems.find((book: any) => {
+        if (matchedBookIds.includes(book.id)) return false
+        const bookAmount = Number(book.debit) + Number(book.credit)
+        return Math.abs(bookAmount - stmtAmount) < 0.01
+      })
+      if (matched) {
+        matchedStatementIds.push(stmt.id)
+        matchedBookIds.push(matched.id)
+      }
+    }
+
+    if (matchedStatementIds.length > 0) {
+      const placeholders = matchedStatementIds.map((_, i) => `$${i + 1}`).join(",")
+      await prisma.$queryRawUnsafe(
+        `UPDATE "${entitySchema}".reconciliation_item SET is_cleared = TRUE WHERE id IN (${placeholders})`,
+        ...matchedStatementIds
+      )
+    }
+
+    return { matchedCount: matchedStatementIds.length }
+  },
+
+  async getSummary(entitySchema: string, reconciliationId: string) {
+    const recs = await prisma.$queryRawUnsafe<any[]>(
+      `SELECT * FROM "${entitySchema}".bank_reconciliation WHERE id = $1`, reconciliationId
+    )
+    if (!recs[0]) throw new Error("Reconciliation not found")
+
+    const items = await prisma.$queryRawUnsafe<any[]>(
+      `SELECT type, COALESCE(SUM(amount), 0) as total
+       FROM "${entitySchema}".reconciliation_item
+       WHERE reconciliation_id = $1
+       GROUP BY type`, reconciliationId
+    )
+
+    const getAmount = (type: string) => Number(items.find((i: any) => i.type === type)?.total || 0)
+
+    const outstandingChecks = getAmount("outstanding_check")
+    const depositsInTransit = getAmount("deposit_in_transit")
+    const bankCharges = getAmount("bank_charge")
+    const interest = getAmount("interest")
+    const nsf = getAmount("nsf")
+    const bankErrors = getAmount("bank_error")
+    const bookErrors = getAmount("book_error")
+
+    const statementBalance = Number(recs[0].statement_ending_balance)
+    const bookBalance = Number(recs[0].book_ending_balance)
+
+    const adjustedBankBalance = statementBalance + depositsInTransit - outstandingChecks + bankErrors
+    const adjustedBookBalance = bookBalance - bankCharges + interest - nsf - bookErrors
+
+    return {
+      statementBalance,
+      bookBalance,
+      outstandingChecks,
+      depositsInTransit,
+      bankCharges,
+      interest,
+      nsf,
+      bankErrors,
+      bookErrors,
+      adjustedBankBalance,
+      adjustedBookBalance,
+      balanced: Math.abs(adjustedBankBalance - adjustedBookBalance) < 0.01,
+    }
+  },
+
   async reconcile(entitySchema: string, reconciliationId: string, userId: string) {
     const rows = await prisma.$queryRawUnsafe<any[]>(
       `SELECT * FROM "${entitySchema}".bank_reconciliation WHERE id = $1`, reconciliationId

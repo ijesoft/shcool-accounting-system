@@ -80,6 +80,9 @@ export const postingEngine = {
     }
 
     const fiscalPeriodId = await getCurrentFiscalPeriod(entitySchema, entryDate)
+    if (!fiscalPeriodId) {
+      return { success: false, errors: [{ code: "ERR_FISCAL_PERIOD_NOT_FOUND", message: "No active fiscal period for this date" }] }
+    }
 
     // Post within a transaction
     try {

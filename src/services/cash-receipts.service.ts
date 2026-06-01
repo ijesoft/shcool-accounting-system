@@ -34,12 +34,17 @@ export const cashReceiptsService = {
     const txns = await prisma.$queryRawUnsafe<any[]>(
       `INSERT INTO "${entitySchema}".payment_transaction (transaction_number, student_id, invoice_id, payment_date, amount, payment_method, check_number, check_date, bank_name, reference, payor_name, payor_address, tin)
        VALUES (
-         (SELECT CONCAT('PMT-', LPAD(COALESCE(MAX(CAST(SPLIT_PART(transaction_number, '-', 2) AS INT)), 0) + 1, 6, '0')) FROM "${entitySchema}".payment_transaction),
+         (SELECT CONCAT(prefix, '-', LPAD(CAST(next_number AS TEXT), 6, '0'))
+          FROM "${entitySchema}".number_series WHERE series_type = 'PMT' LIMIT 1),
          $1, $2, $3::date, $4, $5, $6, $7::date, $8, $9, $10, $11, $12
        ) RETURNING *`,
       data.studentId || null, data.invoiceId || null, data.paymentDate, data.amount,
       data.paymentMethod, data.checkNumber || null, data.checkDate || null, data.bankName || null, data.reference || null,
       data.payorName || null, data.payorAddress || null, data.tin || null
+    )
+
+    await prisma.$queryRawUnsafe(
+      `UPDATE "${entitySchema}".number_series SET next_number = next_number + 1 WHERE series_type = 'PMT'`
     )
     return txns[0]
   },
@@ -85,11 +90,16 @@ export const cashReceiptsService = {
     const orRows = await prisma.$queryRawUnsafe<any[]>(
       `INSERT INTO "${entitySchema}".official_receipt (or_number, or_date, cash_receipt_id, student_id, payor_name, payor_address, tin, amount, journal_entry_id, created_by)
        VALUES (
-         (SELECT CONCAT('OR-', LPAD(COALESCE(MAX(CAST(SPLIT_PART(or_number, '-', 2) AS INT)), 0) + 1, 6, '0')) FROM "${entitySchema}".official_receipt),
+         (SELECT CONCAT(prefix, '-', LPAD(CAST(next_number AS TEXT), 6, '0'))
+          FROM "${entitySchema}".number_series WHERE series_type = 'OR' LIMIT 1),
          $1::date, $2, $3, $4, $5, $6, $7, $8, $9
        ) RETURNING *`,
       payment.payment_date, payment.id, payment.student_id, payorName,
       null, null, payment.amount, entry.id, userId
+    )
+
+    await prisma.$queryRawUnsafe(
+      `UPDATE "${entitySchema}".number_series SET next_number = next_number + 1 WHERE series_type = 'OR'`
     )
 
     await prisma.$queryRawUnsafe(

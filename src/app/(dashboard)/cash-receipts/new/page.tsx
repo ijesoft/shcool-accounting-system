@@ -56,7 +56,7 @@ export default function NewCashReceiptPage() {
         }),
       })
       if (!res.ok) { const d = await res.json(); throw new Error(d.error?.message || "Failed") }
-      router.push("/dashboard/cash-receipts")
+      router.push("/cash-receipts")
       router.refresh()
     } catch (err: any) {
       setError(err.message)

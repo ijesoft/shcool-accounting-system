@@ -24,7 +24,7 @@ function statusBadge(status: string) {
 export default async function BankReconciliationPage() {
   const session = await getSession()
   if (!session.userId) redirect("/login")
-  if (!hasPermission(session.roleName, "bank_reconciliation", "read")) redirect("/dashboard")
+  if (!hasPermission(session.roleName, "bank_reconciliation", "read")) redirect("/")
   if (!session.entityId) return <p className="p-6 text-muted-foreground">Please select an entity.</p>
 
   const entity = await prisma.entity.findUnique({ where: { id: session.entityId } })
@@ -40,7 +40,7 @@ export default async function BankReconciliationPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Bank Reconciliation</h1>
-        <Link href="/dashboard/bank-reconciliation/new"><Button>New Reconciliation</Button></Link>
+        <Link href="/bank-reconciliation/new"><Button>New Reconciliation</Button></Link>
       </div>
       <div className="rounded-lg border bg-card">
         <div className="overflow-x-auto">
@@ -62,7 +62,7 @@ export default async function BankReconciliationPage() {
               {reconciliations.map((r: any) => (
                 <tr key={r.id} className="border-b hover:bg-muted/50">
                   <td className="p-3">
-                    <Link href={`/dashboard/bank-reconciliation/${r.id}`} className="text-blue-600 hover:underline">{r.bank_name}</Link>
+                    <Link href={`/bank-reconciliation/${r.id}`} className="text-blue-600 hover:underline">{r.bank_name}</Link>
                   </td>
                   <td className="p-3">{new Date(r.statement_date).toLocaleDateString()}</td>
                   <td className="p-3 text-right font-mono">{fmt(r.statement_ending_balance)}</td>

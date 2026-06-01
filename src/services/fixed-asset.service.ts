@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db"
 import { postingEngine } from "@/lib/accounting/posting-engine"
 import { journalEntryRepository } from "@/repositories/journal-entry.repository"
 import { auditLog } from "@/lib/audit/audit-log"
+import { depreciationEngine } from "@/lib/accounting/depreciation-engine"
 
 export const fixedAssetService = {
   async list(entitySchema: string) {
@@ -32,20 +33,21 @@ export const fixedAssetService = {
   async create(entitySchema: string, data: {
     assetCode: string; assetName: string; assetCategory: string
     acquisitionDate: string; acquisitionCost: number
-    estimatedLifeYears: number; salvageValue?: number
+    estimatedLifeYears: number; salvageValue?: number; depreciationMethod?: string
   }) {
     return prisma.$queryRawUnsafe<any[]>(
-      `INSERT INTO "${entitySchema}".fixed_asset (asset_code, asset_name, asset_category, acquisition_date, acquisition_cost, estimated_life_years, salvage_value)
-       VALUES ($1, $2, $3, $4::date, $5, $6, $7) RETURNING *`,
+      `INSERT INTO "${entitySchema}".fixed_asset (asset_code, asset_name, asset_category, acquisition_date, acquisition_cost, estimated_life_years, salvage_value, depreciation_method)
+       VALUES ($1, $2, $3, $4::date, $5, $6, $7, $8) RETURNING *`,
       data.assetCode, data.assetName, data.assetCategory,
       data.acquisitionDate, data.acquisitionCost,
-      data.estimatedLifeYears, data.salvageValue || 0
+      data.estimatedLifeYears, data.salvageValue || 0,
+      data.depreciationMethod || "straight_line"
     ).then(r => r[0])
   },
 
   async update(entitySchema: string, id: string, data: {
     assetName?: string; assetCategory?: string; acquisitionCost?: number
-    estimatedLifeYears?: number; salvageValue?: number
+    estimatedLifeYears?: number; salvageValue?: number; depreciationMethod?: string
   }) {
     const sets: string[] = []
     const vals: any[] = []
@@ -55,6 +57,7 @@ export const fixedAssetService = {
     if (data.acquisitionCost !== undefined) { sets.push(`acquisition_cost = $${i}`); vals.push(data.acquisitionCost); i++ }
     if (data.estimatedLifeYears !== undefined) { sets.push(`estimated_life_years = $${i}`); vals.push(data.estimatedLifeYears); i++ }
     if (data.salvageValue !== undefined) { sets.push(`salvage_value = $${i}`); vals.push(data.salvageValue); i++ }
+    if (data.depreciationMethod !== undefined) { sets.push(`depreciation_method = $${i}`); vals.push(data.depreciationMethod); i++ }
     vals.push(id)
     return prisma.$queryRawUnsafe<any[]>(
       `UPDATE "${entitySchema}".fixed_asset SET ${sets.join(", ")}, updated_at = NOW() WHERE id = $${i} AND status = 'active' RETURNING *`,
@@ -72,6 +75,35 @@ export const fixedAssetService = {
     )
   },
 
+  async generateDepreciationSchedule(entitySchema: string, assetId: string) {
+    const rows = await prisma.$queryRawUnsafe<any[]>(
+      `SELECT * FROM "${entitySchema}".fixed_asset WHERE id = $1`, assetId
+    )
+    const asset = rows[0]
+    if (!asset) throw new Error("Asset not found")
+
+    const method = asset.depreciation_method || "straight_line"
+    const totalMonths = Number(asset.estimated_life_years) * 12
+    const schedule = depreciationEngine.generateSchedule(
+      method,
+      Number(asset.acquisition_cost),
+      Number(asset.salvage_value),
+      Number(asset.estimated_life_years),
+      asset.acquisition_date,
+      totalMonths
+    )
+    return {
+      assetId: asset.id,
+      assetCode: asset.asset_code,
+      assetName: asset.asset_name,
+      method,
+      acquisitionCost: Number(asset.acquisition_cost),
+      salvageValue: Number(asset.salvage_value),
+      usefulLifeYears: Number(asset.estimated_life_years),
+      lines: schedule.lines,
+    }
+  },
+
   async depreciate(entitySchema: string, assetId: string, fiscalPeriodId: string, userId: string) {
     const rows = await prisma.$queryRawUnsafe<any[]>(
       `SELECT * FROM "${entitySchema}".fixed_asset WHERE id = $1`, assetId
@@ -84,9 +116,20 @@ export const fixedAssetService = {
     const accumulated = Number(asset.accumulated_depreciation)
     if (accumulated >= depreciableBase) throw new Error("Asset is already fully depreciated")
 
-    const monthlyDep = depreciableBase / (Number(asset.estimated_life_years) * 12)
-    const remaining = depreciableBase - accumulated
-    const depAmount = Math.min(monthlyDep, remaining)
+    const method = asset.depreciation_method || "straight_line"
+    const remainingMonths = (Number(asset.estimated_life_years) * 12) - Math.round(accumulated / (depreciableBase / (Number(asset.estimated_life_years) * 12)))
+    const schedule = depreciationEngine.generateSchedule(
+      method,
+      Number(asset.acquisition_cost),
+      Number(asset.salvage_value),
+      Number(asset.estimated_life_years),
+      asset.acquisition_date,
+      remainingMonths
+    )
+    const currentPeriodIndex = schedule.lines.findIndex(l => l.periodDate === new Date().toISOString().split("T")[0])
+    const line = currentPeriodIndex >= 0 ? schedule.lines[currentPeriodIndex] : schedule.lines[0]
+    if (!line) throw new Error("No depreciation schedule available")
+    const depAmount = line.depreciationAmount
 
     const accounts = await prisma.$queryRawUnsafe<any[]>(
       `SELECT id, account_code FROM "${entitySchema}".account WHERE account_code IN ($1, $2)`,
@@ -100,7 +143,7 @@ export const fixedAssetService = {
 
     const entry = await journalEntryRepository.create(entitySchema, {
       entryDate: new Date().toISOString().split("T")[0],
-      sourceModule: "FA",
+      sourceModule: "DR",
       description: `Depreciation - ${asset.asset_name} (${asset.asset_code})`,
       createdBy: userId,
       lines: [

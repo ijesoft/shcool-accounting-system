@@ -30,7 +30,7 @@ const statusColors: Record<string, string> = {
 export default async function JournalEntriesPage() {
   const session = await getSession()
   if (!session.userId) redirect("/login")
-  if (!hasPermission(session.roleName, "journal_entries", "read")) redirect("/dashboard")
+  if (!hasPermission(session.roleName, "journal_entries", "read")) redirect("/")
 
   if (!session.entityId) {
     return (
@@ -50,7 +50,7 @@ export default async function JournalEntriesPage() {
           <h1 className="text-3xl font-bold">Journal Entries</h1>
           <p className="text-sm text-muted-foreground">{entityName}</p>
         </div>
-        <Link href="/dashboard/journal-entries/new">
+        <Link href="/journal-entries/new">
           <Button>New Journal Entry</Button>
         </Link>
       </div>
@@ -82,7 +82,7 @@ export default async function JournalEntriesPage() {
               {entries.map((entry: any) => (
                 <tr key={entry.id} className="border-b hover:bg-muted/50">
                   <td className="p-3 font-mono text-xs">
-                    <Link href={`/dashboard/journal-entries/${entry.id}`} className="text-blue-600 hover:underline">
+                    <Link href={`/journal-entries/${entry.id}`} className="text-blue-600 hover:underline">
                       {entry.entry_number}
                     </Link>
                   </td>

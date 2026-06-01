@@ -76,7 +76,7 @@ export default function NewJournalEntryPage() {
         return
       }
 
-      router.push(`/dashboard/journal-entries/${data.data.id}`)
+      router.push(`/journal-entries/${data.data.id}`)
     } catch {
       setError("An unexpected error occurred")
     } finally {

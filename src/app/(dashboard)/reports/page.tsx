@@ -12,22 +12,22 @@ import {
 
 const reportLinks = [
   {
-    href: "/dashboard/reports/trial-balance",
+    href: "/reports/trial-balance",
     title: "Trial Balance",
     description: "List of all accounts with debit/credit balances for a given period.",
   },
   {
-    href: "/dashboard/reports/income-statement",
+    href: "/reports/income-statement",
     title: "Income Statement",
     description: "Revenue and expense summary showing profit/loss for a date range.",
   },
   {
-    href: "/dashboard/reports/balance-sheet",
+    href: "/reports/balance-sheet",
     title: "Balance Sheet",
     description: "Assets, liabilities, and equity as of a specific date.",
   },
   {
-    href: "/dashboard/reports/cash-flow",
+    href: "/reports/cash-flow",
     title: "Cash Flow Statement",
     description: "Cash inflows and outflows from operating, investing, and financing activities.",
   },
@@ -36,7 +36,7 @@ const reportLinks = [
 export default async function ReportsPage() {
   const session = await getSession()
   if (!session.userId) redirect("/login")
-  if (!hasPermission(session.roleName, "reports", "read")) redirect("/dashboard")
+  if (!hasPermission(session.roleName, "reports", "read")) redirect("/")
 
   return (
     <div className="space-y-6">

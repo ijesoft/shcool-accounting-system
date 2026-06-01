@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic"
 export default async function OfficialReceiptsPage() {
   const session = await getSession()
   if (!session.userId) redirect("/login")
-  if (!hasPermission(session.roleName, "official_receipts", "read")) redirect("/dashboard")
+  if (!hasPermission(session.roleName, "official_receipts", "read")) redirect("/")
   if (!session.entityId) return <p className="p-6 text-muted-foreground">Please select an entity.</p>
 
   const entity = await prisma.entity.findUnique({ where: { id: session.entityId } })
@@ -42,7 +42,7 @@ export default async function OfficialReceiptsPage() {
             {rows.map((r: any) => (
               <tr key={r.id} className="border-b hover:bg-muted/50">
                 <td className="p-3 font-mono text-xs">
-                  <Link href={`/dashboard/official-receipts/${r.id}`} className="text-blue-600 hover:underline">{r.or_number}</Link>
+                  <Link href={`/official-receipts/${r.id}`} className="text-blue-600 hover:underline">{r.or_number}</Link>
                 </td>
                 <td className="p-3">{new Date(r.or_date).toLocaleDateString()}</td>
                 <td className="p-3">{r.payor_name || "—"}</td>

@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client"
 import bcrypt from "bcryptjs"
+import { createEntitySchema } from "../src/lib/entity-schema"
 
 const prisma = new PrismaClient()
 
@@ -119,7 +120,23 @@ async function main() {
     }
   }
 
-  // Create super admin user
+  // Create default entities
+  const mainEntity = await prisma.entity.upsert({
+    where: { code: "MAIN" },
+    update: {},
+    create: {
+      code: "MAIN",
+      name: "Main School",
+      address: "123 Education St",
+      fiscalYearStart: new Date("2026-01-01"),
+      schemaName: "entity_main",
+    },
+  })
+
+  // Create the entity's database schema and tables
+  await createEntitySchema("entity_main")
+
+  // Create super admin user (assign to the main entity)
   const superAdminRole = await prisma.role.findUnique({ where: { name: "super_admin" } })
   if (superAdminRole) {
     const passwordHash = await bcrypt.hash("admin123", 12)
@@ -131,6 +148,7 @@ async function main() {
         passwordHash,
         fullName: "System Administrator",
         roleId: superAdminRole.id,
+        entityId: mainEntity.id,
         isActive: true,
       },
     })

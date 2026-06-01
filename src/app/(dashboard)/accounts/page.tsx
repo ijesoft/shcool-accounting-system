@@ -19,7 +19,7 @@ export default async function AccountsPage() {
   if (!session.userId) redirect("/login")
 
   if (!hasPermission(session.roleName, "accounts", "read")) {
-    redirect("/dashboard")
+    redirect("/")
   }
 
   if (!session.entityId) {

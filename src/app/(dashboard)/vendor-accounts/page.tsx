@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic"
 export default async function VendorAccountsPage() {
   const session = await getSession()
   if (!session.userId) redirect("/login")
-  if (!hasPermission(session.roleName, "vendor_accounts", "read")) redirect("/dashboard")
+  if (!hasPermission(session.roleName, "vendor_accounts", "read")) redirect("/")
   if (!session.entityId) return <p className="p-6 text-muted-foreground">Please select an entity.</p>
 
   const entity = await prisma.entity.findUnique({ where: { id: session.entityId } })

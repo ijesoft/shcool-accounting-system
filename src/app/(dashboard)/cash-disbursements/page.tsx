@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic"
 export default async function CashDisbursementsPage() {
   const session = await getSession()
   if (!session.userId) redirect("/login")
-  if (!hasPermission(session.roleName, "cash_disbursements", "read")) redirect("/dashboard")
+  if (!hasPermission(session.roleName, "cash_disbursements", "read")) redirect("/")
   if (!session.entityId) return <p className="p-6 text-muted-foreground">Please select an entity.</p>
 
   const entity = await prisma.entity.findUnique({ where: { id: session.entityId } })
@@ -23,7 +23,7 @@ export default async function CashDisbursementsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Cash Disbursements</h1>
-        <Link href="/dashboard/cash-disbursements/new"><Button>New Disbursement</Button></Link>
+        <Link href="/cash-disbursements/new"><Button>New Disbursement</Button></Link>
       </div>
       <div className="rounded-lg border bg-card">
         <table className="w-full text-sm">

@@ -24,7 +24,7 @@ export default async function IncomeStatementPage({
 
   const session = await getSession()
   if (!session.userId) redirect("/login")
-  if (!hasPermission(session.roleName, "reports", "read")) redirect("/dashboard")
+  if (!hasPermission(session.roleName, "reports", "read")) redirect("/")
   if (!session.entityId) return <p className="p-6 text-muted-foreground">Please select an entity.</p>
 
   const data = await getData(session.entityId, from, to)

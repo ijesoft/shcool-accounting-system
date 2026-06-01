@@ -38,7 +38,7 @@ export default function NewFixedAssetPage() {
         const data = await res.json()
         throw new Error(data.error?.message || "Failed to create asset")
       }
-      router.push("/dashboard/fixed-assets")
+      router.push("/fixed-assets")
       router.refresh()
     } catch (err: any) {
       setError(err.message)
