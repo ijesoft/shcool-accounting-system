@@ -1,0 +1,72 @@
+﻿<h2>Choose the Architectural Approach</h2>
+<p class="subtitle">School Accounting System — Mixed K-12 + College, Multi-Entity, PH GAAP, 100 concurrent users, 100k transactions/month, On-Premise</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Modular Monolith + Event-Driven Posting (Recommended)</h3>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul>
+          <li>Single deployable — simple ops for on-premise</li>
+          <li>Domain modules with clear boundaries (DDD)</li>
+          <li>Event-driven posting engine with outbox pattern</li>
+          <li>Multi-entity via tenant_id at schema level</li>
+          <li>ACID compliance within single database</li>
+          <li>Easy to monitor, backup, and restore</li>
+          <li>Best fit for 100 users / 100k txns per month</li>
+        </ul></div>
+        <div class="cons"><h4>Cons</h4><ul>
+          <li>Cannot scale modules independently</li>
+          <li>Database becomes single point of scaling</li>
+        </ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Microservices + CQRS / Event Sourcing</h3>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul>
+          <li>Independent scaling per domain</li>
+          <li>Event sourcing provides native audit trail</li>
+          <li>Separate read models for reporting</li>
+          <li>Team scalability (multiple dev teams)</li>
+        </ul></div>
+        <div class="cons"><h4>Cons</h4><ul>
+          <li>Significant ops complexity for on-premise</li>
+          <li>Distributed transactions for accounting are dangerous</li>
+          <li>Eventual consistency risks for financial data</li>
+          <li>Overkill for 100 users / 100k txns</li>
+          <li>Harder to backup and restore consistently</li>
+        </ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Modular Monolith + Database-Centric Posting Engine</h3>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul>
+          <li>PostgreSQL stored procedures enforce accounting rules at DB level</li>
+          <li>Highest performance for journal posting</li>
+          <li>ACID guarantees at database level</li>
+          <li>Impossible to post unbalanced entries</li>
+        </ul></div>
+        <div class="cons"><h4>Cons</h4><ul>
+          <li>Business logic trapped in stored procedures — hard to test, version, debug</li>
+          <li>Poor developer experience with PL/pgSQL</li>
+          <li>Makes Next.js a thin UI layer only</li>
+          <li>Vendor lock-in to PostgreSQL</li>
+          <li>Cannot reuse logic across services if migrated later</li>
+        </ul></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<p style="margin-top: 2rem;"><strong>My recommendation: Approach A</strong> — modular monolith with event-driven posting. It balances clean architecture with operational simplicity for on-premise deployment. The event-driven approach gives us an audit trail without the complexity of full event sourcing.</p>

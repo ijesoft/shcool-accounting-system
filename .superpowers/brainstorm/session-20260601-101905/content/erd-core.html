@@ -1,0 +1,71 @@
+﻿<h2>Core Database Schema — Chart of Accounts &amp; Journal Entry</h2>
+<p class="subtitle">The foundation of the entire accounting system</p>
+
+<div class="section">
+  <h3>1. Entity / Multi-Tenancy</h3>
+  <pre style="background:#1e1e2e;padding:1rem;border-radius:8px;font-size:0.85rem;color:#cdd6f4;overflow-x:auto;">
+<span style="color:#89b4fa;">entity</span> (
+  id              UUID PK
+  code            VARCHAR(20) UNIQUE    -- e.g. "MNHS-MAIN", "MNHS-BRANCH1"
+  name            VARCHAR(200)
+  tin             VARCHAR(20)           -- BIR Tax ID
+  address         TEXT
+  fiscal_year_start DATE               -- e.g. 2024-07-01 (academic year)
+  status          ENUM(active, inactive)
+  created_at, updated_at
+)
+
+<span style="color:#89b4fa;">account</span> (per entity — one schema per entity)
+  id              UUID PK
+  account_code    VARCHAR(20) UNIQUE    -- e.g. "10100" (Cash in Bank)
+  account_name    VARCHAR(200)
+  account_type    ENUM(asset, liability, equity, revenue, expense, contra_asset)
+  normal_balance  ENUM(debit, credit)
+  is_active       BOOLEAN
+  parent_id       UUID FK → account     -- hierarchical chart of accounts
+  level           INT                   -- 1=header, 2=sub-header, 3=postable
+  created_at, updated_at
+</pre>
+</div>
+
+<div class="section">
+  <h3>2. Journal Entry (Source of Truth)</h3>
+  <pre style="background:#1e1e2e;padding:1rem;border-radius:8px;font-size:0.85rem;color:#cdd6f4;overflow-x:auto;">
+<span style="color:#89b4fa;">journal_entry</span> (
+  id                UUID PK
+  entry_number      VARCHAR(30) UNIQUE  -- e.g. "JE-2024-00001"
+  entry_date        DATE
+  reference         VARCHAR(50)         -- OR# / CV# / DV#
+  source_module     VARCHAR(30)         -- AR, AP, CM, CD, JE, FA, BR
+  description       TEXT
+  status            ENUM(draft, posted, void)
+  posted_at         TIMESTAMPTZ
+  posted_by         UUID FK → user
+  approved_by       UUID FK → user
+  entity_id         UUID FK → entity
+  fiscal_year_id    UUID FK → fiscal_year
+  created_by, created_at, updated_by, updated_at
+)
+
+<span style="color:#89b4fa;">journal_entry_line</span> (
+  id                UUID PK
+  journal_entry_id  UUID FK → journal_entry
+  account_id        UUID FK → account
+  debit             DECIMAL(18,2) DEFAULT 0
+  credit            DECIMAL(18,2) DEFAULT 0
+  line_description  TEXT
+  line_order        INT
+  -- CONSTRAINT: SUM(debit) must equal SUM(credit) per entry
+)</pre>
+</div>
+
+<div class="section">
+  <h3>Key Constraints (enforced at DB level)</h3>
+  <ul>
+    <li><strong>Balanced entry:</strong> CHECK constraint or trigger ensuring Σ(debits) = Σ(credits)</li>
+    <li><strong>Account type integrity:</strong> debit accounts cannot have negative debits</li>
+    <li><strong>Immutable posting:</strong> once <code>status = 'posted'</code>, lines cannot be updated — reversing entry required</li>
+    <li><strong>Reference uniqueness:</strong> OR number series, CV number series auto-generated per entity + fiscal year</li>
+    <li><strong>No future dating:</strong> entry_date cannot be in a closed fiscal period</li>
+  </ul>
+</div>
