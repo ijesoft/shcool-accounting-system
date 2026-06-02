@@ -1,11 +1,16 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
+import { formatAmount } from "@/lib/utils"
+import { AccountAutocomplete, AccountOption } from "@/components/account-autocomplete"
+import { CustomerAutocomplete, type PartyOption } from "@/components/customer-autocomplete"
+import { VendorAutocomplete } from "@/components/vendor-autocomplete"
+import { EmployeeAutocomplete } from "@/components/employee-autocomplete"
 
 interface Line {
   accountId: string
@@ -13,6 +18,8 @@ interface Line {
   credit: number
   lineDescription: string
   lineOrder: number
+  partyType?: "student" | "vendor" | "employee"
+  partyId?: string
 }
 
 export default function NewJournalEntryPage() {
@@ -26,13 +33,81 @@ export default function NewJournalEntryPage() {
   ])
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
+  const [accounts, setAccounts] = useState<AccountOption[]>([])
+  const [students, setStudents] = useState<PartyOption[]>([])
+  const [vendors, setVendors] = useState<PartyOption[]>([])
+  const [employees, setEmployees] = useState<PartyOption[]>([])
+
+  useEffect(() => {
+    let cancelled = false
+    Promise.all([
+      fetch("/api/v1/accounts").then((r) => r.json()),
+      fetch("/api/v1/student-accounts").then((r) => r.json()),
+      fetch("/api/v1/vendor-accounts").then((r) => r.json()),
+      fetch("/api/v1/employees").then((r) => r.json()),
+    ])
+      .then(([accRes, stuRes, venRes, empRes]) => {
+        if (cancelled) return
+        if (accRes?.success && Array.isArray(accRes.data)) {
+          setAccounts(
+            accRes.data.map((a: any) => ({
+              id: a.id,
+              accountCode: a.account_code,
+              accountName: a.account_name,
+              normalBalance: a.normal_balance,
+              isPostable: a.is_postable,
+              subledgerType: a.subledger_type,
+            }))
+          )
+        }
+        if (stuRes?.success && stuRes.data?.rows) {
+          setStudents(
+            stuRes.data.rows.map((s: any) => ({
+              id: s.id,
+              label: `${s.full_name} (${s.student_number})`,
+              subtext: s.course || s.grade_level || "",
+            }))
+          )
+        }
+        if (venRes?.success && venRes.data?.rows) {
+          setVendors(
+            venRes.data.rows.map((v: any) => ({
+              id: v.id,
+              label: v.vendor_name,
+              subtext: v.tin || "",
+            }))
+          )
+        }
+        if (empRes?.success && empRes.data?.rows) {
+          setEmployees(
+            empRes.data.rows.map((e: any) => ({
+              id: e.id,
+              label: `${e.full_name} (${e.employee_code})`,
+              subtext: e.position || e.department || "",
+            }))
+          )
+        }
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  function subledgerTypeFor(line: Line): "student" | "vendor" | "employee" | null {
+    const acc = accounts.find((a) => a.id === line.accountId) as (AccountOption & { subledgerType?: string | null }) | undefined
+    return (acc?.subledgerType as "student" | "vendor" | "employee" | null) ?? null
+  }
 
   const totalDebit = lines.reduce((s, l) => s + l.debit, 0)
   const totalCredit = lines.reduce((s, l) => s + l.credit, 0)
   const isBalanced = Math.abs(totalDebit - totalCredit) < 0.01
 
   function addLine() {
-    setLines([...lines, { accountId: "", debit: 0, credit: 0, lineDescription: "", lineOrder: lines.length }])
+    setLines([
+      ...lines,
+      { accountId: "", debit: 0, credit: 0, lineDescription: "", lineOrder: lines.length, partyType: undefined, partyId: undefined },
+    ])
   }
 
   function removeLine(index: number) {
@@ -66,6 +141,8 @@ export default function NewJournalEntryPage() {
             credit: l.credit,
             lineDescription: l.lineDescription || undefined,
             lineOrder: l.lineOrder,
+            ...(l.partyType ? { partyType: l.partyType } : {}),
+            ...(l.partyId ? { partyId: l.partyId } : {}),
           })),
         }),
       })
@@ -116,17 +193,61 @@ export default function NewJournalEntryPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             {lines.map((line, i) => (
-              <div key={i} className="flex gap-2 items-end">
+              <div key={i} className="flex flex-wrap gap-2 items-end">
                 <div className="flex-1 space-y-1">
-                  <Label className="text-xs">Account ID</Label>
-                  <Input
+                  <Label className="text-xs">Account</Label>
+                  <AccountAutocomplete
                     value={line.accountId}
-                    onChange={(e) => updateLine(i, "accountId", e.target.value)}
-                    placeholder="UUID"
-                    className="font-mono text-xs"
+                    onChange={(id) => updateLine(i, "accountId", id)}
+                    accounts={accounts}
                     required
                   />
                 </div>
+                {subledgerTypeFor(line) === "student" && (
+                  <div className="basis-full space-y-1">
+                    <Label className="text-xs">Customer</Label>
+                    <CustomerAutocomplete
+                      value={line.partyId ?? ""}
+                      onChange={(id) => {
+                        const u = [...lines]
+                        u[i] = { ...u[i], partyType: "student", partyId: id || undefined }
+                        setLines(u)
+                      }}
+                      parties={students}
+                      required
+                    />
+                  </div>
+                )}
+                {subledgerTypeFor(line) === "vendor" && (
+                  <div className="basis-full space-y-1">
+                    <Label className="text-xs">Vendor</Label>
+                    <VendorAutocomplete
+                      value={line.partyId ?? ""}
+                      onChange={(id: string) => {
+                        const u = [...lines]
+                        u[i] = { ...u[i], partyType: "vendor", partyId: id || undefined }
+                        setLines(u)
+                      }}
+                      parties={vendors}
+                      required
+                    />
+                  </div>
+                )}
+                {subledgerTypeFor(line) === "employee" && (
+                  <div className="basis-full space-y-1">
+                    <Label className="text-xs">Employee</Label>
+                    <EmployeeAutocomplete
+                      value={line.partyId ?? ""}
+                      onChange={(id: string) => {
+                        const u = [...lines]
+                        u[i] = { ...u[i], partyType: "employee", partyId: id || undefined }
+                        setLines(u)
+                      }}
+                      parties={employees}
+                      required
+                    />
+                  </div>
+                )}
                 <div className="w-28 space-y-1">
                   <Label className="text-xs">Debit</Label>
                   <Input
@@ -163,10 +284,10 @@ export default function NewJournalEntryPage() {
 
             <div className="flex justify-end gap-4 pt-2 border-t text-sm">
               <span className={totalDebit > 0 ? "font-medium" : ""}>
-                Total Debit: <strong className="font-mono">{totalDebit.toFixed(2)}</strong>
+                Total Debit: <strong className="font-mono">{formatAmount(totalDebit)}</strong>
               </span>
               <span className={totalCredit > 0 ? "font-medium" : ""}>
-                Total Credit: <strong className="font-mono">{totalCredit.toFixed(2)}</strong>
+                Total Credit: <strong className="font-mono">{formatAmount(totalCredit)}</strong>
               </span>
               <span className={isBalanced ? "text-green-600" : "text-red-600"}>
                 {isBalanced ? "✓ Balanced" : "✗ Unbalanced"}
