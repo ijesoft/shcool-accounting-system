@@ -35,7 +35,7 @@ export const postingEngine = {
     for (const line of entry.lines) {
       const accounts = await prisma.$queryRawUnsafe<any[]>(
         `SELECT id, account_code, account_name, level, is_active 
-         FROM "${entitySchema}".account WHERE id = $1`,
+         FROM "${entitySchema}".account WHERE id = $1::uuid`,
         line.accountId
       )
       if (!accounts[0]) {
@@ -90,15 +90,15 @@ export const postingEngine = {
         // Update journal entry status
         await tx.$queryRawUnsafe(
           `UPDATE "${entitySchema}".journal_entry 
-           SET status = 'posted', posted_at = NOW(), posted_by = $1, fiscal_period_id = $2, updated_at = NOW()
-           WHERE id = $3`,
+           SET status = 'posted', posted_at = NOW(), posted_by = $1::uuid, fiscal_period_id = $2::uuid, updated_at = NOW()
+           WHERE id = $3::uuid`,
           userId, fiscalPeriodId, entryId
         )
 
         // Update GL running balances
         for (const line of lines) {
           const accounts = await tx.$queryRawUnsafe<any[]>(
-            `SELECT normal_balance FROM "${entitySchema}".account WHERE id = $1`,
+            `SELECT normal_balance FROM "${entitySchema}".account WHERE id = $1::uuid`,
             line.accountId
           )
           if (accounts[0]) {
@@ -121,7 +121,14 @@ export const postingEngine = {
     userId: string
   ): Promise<PostingResult> {
     const original = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT * FROM "${entitySchema}".journal_entry WHERE id = $1`,
+      `SELECT * FROM "${entitySchema}".journal_entry WHERE id = $1::uuid`,
+      originalEntryId
+    )
+    if (!original[0]) return { success: false, errors: [{ code: "ERR_ENTRY_NOT_FOUND", message: "Original entry not found" }] }
+    if (original[0].status !== 'posted') return { success: false, errors: [{ code: "ERR_ENTRY_NOT_POSTED", message: "Can only reverse a posted entry" }] }
+
+    const lines = await prisma.$queryRawUnsafe<any[]>(
+      `SELECT * FROM "${entitySchema}".journal_entry_line WHERE journal_entry_id = $1::uuid ORDER BY line_order`,
       originalEntryId
     )
     if (!original[0]) {
@@ -130,11 +137,6 @@ export const postingEngine = {
     if (original[0].status !== 'posted') {
       return { success: false, errors: [{ code: "ERR_ENTRY_NOT_POSTED", message: "Can only reverse a posted entry" }] }
     }
-
-    const lines = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT * FROM "${entitySchema}".journal_entry_line WHERE journal_entry_id = $1 ORDER BY line_order`,
-      originalEntryId
-    )
 
     // Create reversing lines (swap debits and credits)
     const reversedLines = lines.map((l: any) => ({
@@ -153,7 +155,7 @@ export const postingEngine = {
        VALUES (
          (SELECT CONCAT(prefix, '-', LPAD(CAST(next_number AS TEXT), 5, '0'))
           FROM "${entitySchema}".number_series WHERE series_type = 'JE' LIMIT 1),
-         $1, $2, 'JE', $3, 'approved', $4
+         $1::date, $2, 'JE', $3, 'approved', $4::uuid
        ) RETURNING *`,
       reverseDate, `REV-${original[0].entry_number}`, `Reversing entry for ${original[0].entry_number}`, userId
     )
@@ -162,7 +164,7 @@ export const postingEngine = {
       await prisma.$queryRawUnsafe(
         `INSERT INTO "${entitySchema}".journal_entry_line
          (journal_entry_id, account_id, debit, credit, line_description, line_order)
-         VALUES ($1, $2, $3, $4, $5, $6)`,
+         VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6)`,
         newEntry[0].id, line.accountId, line.debit, line.credit, line.lineDescription, line.lineOrder
       )
     }
@@ -173,7 +175,7 @@ export const postingEngine = {
 
     // Mark original as void
     await prisma.$queryRawUnsafe(
-      `UPDATE "${entitySchema}".journal_entry SET status = 'void', updated_at = NOW() WHERE id = $1`,
+      `UPDATE "${entitySchema}".journal_entry SET status = 'void', updated_at = NOW() WHERE id = $1::uuid`,
       originalEntryId
     )
 

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation"
 import { prisma } from "@/lib/db"
 import { revenueRecognitionService } from "@/services/revenue-recognition.service"
 import { RunRecognitionButton } from "./run-recognition-button"
+import { formatAmount } from "@/lib/utils"
 
 export const dynamic = "force-dynamic"
 
@@ -50,7 +51,7 @@ export default async function UnearnedTuitionReportPage({
         ].map((item) => (
           <div key={item.label} className="rounded-lg border bg-card p-4">
             <p className="text-xs text-muted-foreground">{item.label}</p>
-            <p className="text-xl font-mono font-semibold">{Number(item.value).toFixed(2)}</p>
+            <p className="text-xl font-mono font-semibold">{formatAmount(Number(item.value))}</p>
           </div>
         ))}
       </div>
@@ -80,9 +81,9 @@ export default async function UnearnedTuitionReportPage({
                 <td className="p-3 font-mono text-xs">{row.invoiceNumber}</td>
                 <td className="p-3">{row.term || "—"}</td>
                 <td className="p-3">{new Date(row.invoiceDate).toLocaleDateString()}</td>
-                <td className="p-3 text-right font-mono">{row.tuitionBilled.toFixed(2)}</td>
-                <td className="p-3 text-right font-mono">{row.recognized.toFixed(2)}</td>
-                <td className="p-3 text-right font-mono">{row.unearnedRemaining.toFixed(2)}</td>
+                <td className="p-3 text-right font-mono">{formatAmount(row.tuitionBilled)}</td>
+                <td className="p-3 text-right font-mono">{formatAmount(row.recognized)}</td>
+                <td className="p-3 text-right font-mono">{formatAmount(row.unearnedRemaining)}</td>
               </tr>
             ))}
           </tbody>

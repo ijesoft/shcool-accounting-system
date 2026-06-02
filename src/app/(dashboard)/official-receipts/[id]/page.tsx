@@ -4,6 +4,7 @@ import { hasPermission } from "@/lib/auth/rbac"
 import { redirect } from "next/navigation"
 import { prisma } from "@/lib/db"
 import { OfficialReceiptPrintWrapper } from "@/components/print/OfficialReceiptPrintWrapper"
+import { formatAmount } from "@/lib/utils"
 
 export const dynamic = "force-dynamic"
 
@@ -55,7 +56,7 @@ export default async function OfficialReceiptDetailPage({ params }: { params: Pr
           <div><span className="font-medium">OR Number:</span> {or.or_number}</div>
           <div><span className="font-medium">Date:</span> {new Date(or.or_date).toLocaleDateString()}</div>
           <div><span className="font-medium">Payor:</span> {or.payor_name || "—"}</div>
-          <div><span className="font-medium">Amount:</span> {Number(or.amount).toFixed(2)}</div>
+          <div><span className="font-medium">Amount:</span> {formatAmount(Number(or.amount))}</div>
           <div><span className="font-medium">Status:</span> <span className="capitalize">{or.status || "active"}</span></div>
           <div><span className="font-medium">Payment Ref:</span> {or.payment_ref || "—"}</div>
           <div><span className="font-medium">Payment Method:</span> {or.payment_method || "—"}</div>

@@ -162,6 +162,11 @@ describe("E2E - Route Coverage", () => {
       const paymentsRoute = await import("@/app/api/v1/student-accounts/[id]/payments/route")
       expect(typeof paymentsRoute.GET).toBe("function")
     })
+
+    it("GET /api/v1/student-accounts/next-number - route handler exists", async () => {
+      const { GET } = await import("@/app/api/v1/student-accounts/next-number/route")
+      expect(typeof GET).toBe("function")
+    })
   })
 
   describe("Vendor Accounts Routes", () => {

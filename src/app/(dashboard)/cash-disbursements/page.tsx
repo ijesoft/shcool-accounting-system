@@ -6,6 +6,7 @@ import { cashDisbursementsService } from "@/services/cash-disbursements.service"
 import { prisma } from "@/lib/db"
 import { Button } from "@/components/ui/button"
 import { SearchPagination } from "@/components/ui/search-pagination"
+import { formatAmount } from "@/lib/utils"
 
 export const dynamic = "force-dynamic"
 
@@ -67,7 +68,7 @@ export default async function CashDisbursementsPage({
                 <td className="p-3">{new Date(d.cv_date).toLocaleDateString()}</td>
                 <td className="p-3">{d.payee_name}</td>
                 <td className="p-3 text-xs capitalize">{d.payee_type}</td>
-                <td className="p-3 text-right font-mono">{Number(d.amount).toFixed(2)}</td>
+                <td className="p-3 text-right font-mono">{formatAmount(Number(d.amount))}</td>
                 <td className="p-3 text-xs">{d.payment_method}</td>
                 <td className="p-3 text-xs capitalize">{d.status || "draft"}</td>
                 <td className="p-3 text-center">{d.journal_entry_id ? "✓" : "—"}</td>

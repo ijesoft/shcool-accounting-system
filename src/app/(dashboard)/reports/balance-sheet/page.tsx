@@ -4,6 +4,7 @@ import { redirect } from "next/navigation"
 import { reportService } from "@/services/report.service"
 import { prisma } from "@/lib/db"
 import Link from "next/link"
+import { formatAmount } from "@/lib/utils"
 
 async function getData(entityId: string, asOf: string, comparative: boolean) {
   const entity = await prisma.entity.findUnique({ where: { id: entityId } })
@@ -121,10 +122,10 @@ export default async function BalanceSheetPage({
                 return (
                   <tr key={row.account_code} className="border-b hover:bg-muted/50 transition-colors">
                     <td className="p-4 pl-8 text-foreground">{row.account_name} ({row.account_code})</td>
-                    <td className="p-4 text-right font-mono">{calcBalance(row).toFixed(2)}</td>
+                    <td className="p-4 text-right font-mono">{formatAmount(calcBalance(row))}</td>
                     {comparative && (
                       <td className="p-4 text-right font-mono text-muted-foreground">
-                        {compRow ? calcBalance(compRow).toFixed(2) : "0.00"}
+                        {compRow ? formatAmount(calcBalance(compRow)) : "0.00"}
                       </td>
                     )}
                   </tr>
@@ -132,9 +133,9 @@ export default async function BalanceSheetPage({
               })}
               <tr className="border-b font-semibold bg-muted/10">
                 <td className="p-4 pl-8">Total Assets</td>
-                <td className="p-4 text-right font-mono">{totalAssets.toFixed(2)}</td>
+                <td className="p-4 text-right font-mono">{formatAmount(totalAssets)}</td>
                 {comparative && (
-                  <td className="p-4 text-right font-mono text-muted-foreground">{totalCompAssets.toFixed(2)}</td>
+                  <td className="p-4 text-right font-mono text-muted-foreground">{formatAmount(totalCompAssets)}</td>
                 )}
               </tr>
 
@@ -147,10 +148,10 @@ export default async function BalanceSheetPage({
                 return (
                   <tr key={row.account_code} className="border-b hover:bg-muted/50 transition-colors">
                     <td className="p-4 pl-8 text-foreground">{row.account_name} ({row.account_code})</td>
-                    <td className="p-4 text-right font-mono">{calcBalance(row).toFixed(2)}</td>
+                    <td className="p-4 text-right font-mono">{formatAmount(calcBalance(row))}</td>
                     {comparative && (
                       <td className="p-4 text-right font-mono text-muted-foreground">
-                        {compRow ? calcBalance(compRow).toFixed(2) : "0.00"}
+                        {compRow ? formatAmount(calcBalance(compRow)) : "0.00"}
                       </td>
                     )}
                   </tr>
@@ -158,9 +159,9 @@ export default async function BalanceSheetPage({
               })}
               <tr className="border-b font-semibold bg-muted/10">
                 <td className="p-4 pl-8">Total Liabilities</td>
-                <td className="p-4 text-right font-mono">{totalLiabilities.toFixed(2)}</td>
+                <td className="p-4 text-right font-mono">{formatAmount(totalLiabilities)}</td>
                 {comparative && (
-                  <td className="p-4 text-right font-mono text-muted-foreground">{totalCompLiabilities.toFixed(2)}</td>
+                  <td className="p-4 text-right font-mono text-muted-foreground">{formatAmount(totalCompLiabilities)}</td>
                 )}
               </tr>
 
@@ -173,10 +174,10 @@ export default async function BalanceSheetPage({
                 return (
                   <tr key={row.account_code} className="border-b hover:bg-muted/50 transition-colors">
                     <td className="p-4 pl-8 text-foreground">{row.account_name} ({row.account_code})</td>
-                    <td className="p-4 text-right font-mono">{calcBalance(row).toFixed(2)}</td>
+                    <td className="p-4 text-right font-mono">{formatAmount(calcBalance(row))}</td>
                     {comparative && (
                       <td className="p-4 text-right font-mono text-muted-foreground">
-                        {compRow ? calcBalance(compRow).toFixed(2) : "0.00"}
+                        {compRow ? formatAmount(calcBalance(compRow)) : "0.00"}
                       </td>
                     )}
                   </tr>
@@ -184,19 +185,19 @@ export default async function BalanceSheetPage({
               })}
               <tr className="border-b font-semibold bg-muted/10">
                 <td className="p-4 pl-8">Total Equity</td>
-                <td className="p-4 text-right font-mono">{totalEquity.toFixed(2)}</td>
+                <td className="p-4 text-right font-mono">{formatAmount(totalEquity)}</td>
                 {comparative && (
-                  <td className="p-4 text-right font-mono text-muted-foreground">{totalCompEquity.toFixed(2)}</td>
+                  <td className="p-4 text-right font-mono text-muted-foreground">{formatAmount(totalCompEquity)}</td>
                 )}
               </tr>
             </tbody>
             <tfoot>
               <tr className="border-t-2 font-bold text-base bg-muted/20">
                 <td className="p-4">Total Liabilities & Equity</td>
-                <td className="p-4 text-right font-mono">{(totalLiabilities + totalEquity).toFixed(2)}</td>
+                <td className="p-4 text-right font-mono">{(totalLiabilities + formatAmount(totalEquity))}</td>
                 {comparative && (
                   <td className="p-4 text-right font-mono text-muted-foreground">
-                    {(totalCompLiabilities + totalCompEquity).toFixed(2)}
+                    {(totalCompLiabilities + formatAmount(totalCompEquity))}
                   </td>
                 )}
               </tr>

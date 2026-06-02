@@ -35,7 +35,7 @@ export const ledgerRepository = {
     await prisma.$queryRawUnsafe(
       `INSERT INTO "${entitySchema}".general_ledger 
        (account_id, fiscal_period_id, normal_balance, beginning_balance, total_debits, total_credits)
-       VALUES ($1, $2, $3, 0, $4, $5)
+       VALUES ($1::uuid, $2::uuid, $3, 0, $4, $5)
        ON CONFLICT (account_id, fiscal_period_id)
        DO UPDATE SET 
          total_debits = general_ledger.total_debits + $4,

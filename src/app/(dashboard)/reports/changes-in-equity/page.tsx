@@ -3,6 +3,7 @@ import { hasPermission } from "@/lib/auth/rbac"
 import { redirect } from "next/navigation"
 import { reportService } from "@/services/report.service"
 import { prisma } from "@/lib/db"
+import { formatAmount } from "@/lib/utils"
 
 async function getData(entityId: string, from: string, to: string) {
   const entity = await prisma.entity.findUnique({ where: { id: entityId } })
@@ -61,20 +62,20 @@ export default async function ChangesInEquityPage({
               {data.rows.map((row: any) => (
                 <tr key={row.account_code} className="border-b hover:bg-muted/50 transition-colors">
                   <td className="p-4 font-medium text-foreground">{row.account_name} ({row.account_code})</td>
-                  <td className="p-4 text-right font-mono">{row.beginningBalance.toFixed(2)}</td>
-                  <td className="p-4 text-right font-mono text-emerald-600">{row.netIncome !== 0 ? row.netIncome.toFixed(2) : "—"}</td>
-                  <td className="p-4 text-right font-mono">{row.otherChanges !== 0 ? row.otherChanges.toFixed(2) : "—"}</td>
-                  <td className="p-4 text-right font-mono font-semibold">{row.endingBalance.toFixed(2)}</td>
+                  <td className="p-4 text-right font-mono">{formatAmount(row.beginningBalance)}</td>
+                  <td className="p-4 text-right font-mono text-emerald-600">{row.netIncome !== 0 ? formatAmount(row.netIncome) : "—"}</td>
+                  <td className="p-4 text-right font-mono">{row.otherChanges !== 0 ? formatAmount(row.otherChanges) : "—"}</td>
+                  <td className="p-4 text-right font-mono font-semibold">{formatAmount(row.endingBalance)}</td>
                 </tr>
               ))}
             </tbody>
             <tfoot>
               <tr className="bg-muted/30 font-bold text-base border-t-2">
                 <td className="p-4">Total Equity</td>
-                <td className="p-4 text-right font-mono">{data.totals.beginningBalance.toFixed(2)}</td>
-                <td className="p-4 text-right font-mono text-emerald-600">{data.totals.netIncome.toFixed(2)}</td>
-                <td className="p-4 text-right font-mono">{data.totals.otherChanges.toFixed(2)}</td>
-                <td className="p-4 text-right font-mono text-blue-600">{data.totals.endingBalance.toFixed(2)}</td>
+                <td className="p-4 text-right font-mono">{formatAmount(data.totals.beginningBalance)}</td>
+                <td className="p-4 text-right font-mono text-emerald-600">{formatAmount(data.totals.netIncome)}</td>
+                <td className="p-4 text-right font-mono">{formatAmount(data.totals.otherChanges)}</td>
+                <td className="p-4 text-right font-mono text-blue-600">{formatAmount(data.totals.endingBalance)}</td>
               </tr>
             </tfoot>
           </table>

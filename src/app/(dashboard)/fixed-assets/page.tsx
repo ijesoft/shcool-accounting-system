@@ -6,6 +6,7 @@ import { fixedAssetService } from "@/services/fixed-asset.service"
 import { prisma } from "@/lib/db"
 import { Button } from "@/components/ui/button"
 import { SearchPagination } from "@/components/ui/search-pagination"
+import { formatAmount } from "@/lib/utils"
 
 export const dynamic = "force-dynamic"
 
@@ -68,9 +69,9 @@ export default async function FixedAssetsPage({
                   </td>
                   <td className="p-3">{a.asset_name}</td>
                   <td className="p-3 text-xs capitalize">{a.asset_category}</td>
-                  <td className="p-3 text-right font-mono">{Number(a.acquisition_cost).toFixed(2)}</td>
-                  <td className="p-3 text-right font-mono">{Number(a.accumulated_depreciation).toFixed(2)}</td>
-                  <td className="p-3 text-right font-mono">{Number(a.net_book_value).toFixed(2)}</td>
+                  <td className="p-3 text-right font-mono">{formatAmount(Number(a.acquisition_cost))}</td>
+                  <td className="p-3 text-right font-mono">{formatAmount(Number(a.accumulated_depreciation))}</td>
+                  <td className="p-3 text-right font-mono">{formatAmount(Number(a.net_book_value))}</td>
                   <td className="p-3 text-xs capitalize">{a.status.replace("_", " ")}</td>
                 </tr>
               ))}

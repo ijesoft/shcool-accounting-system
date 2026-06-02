@@ -93,7 +93,7 @@ export const cashReceiptsService = {
 
     const isDeposit = payment.payment_type === "enrollment_deposit"
     const creditAccountCode = isDeposit ? "21320" : "11210"
-    const debitAccountCode = "11120"
+    const debitAccountCode = payment.payment_method === "cash" ? "11110" : "11120"
 
     const accounts = await prisma.$queryRawUnsafe<any[]>(
       `SELECT id, account_code FROM "${entitySchema}".account WHERE account_code IN ($1, $2)`,
@@ -165,7 +165,7 @@ export const cashReceiptsService = {
       ) VALUES (
         (SELECT CONCAT(prefix, '-', LPAD(CAST(next_number AS TEXT), 6, '0'))
          FROM "${entitySchema}".number_series WHERE series_type = 'OR' LIMIT 1),
-        $1::date, $2::uuid, $3::uuid, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16
+        $1::date, $2::uuid, $3::uuid, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15::uuid, $16::uuid
       ) RETURNING *`,
       payment.payment_date,
       payment.id,
@@ -193,7 +193,7 @@ export const cashReceiptsService = {
     await prisma.$queryRawUnsafe(
       `INSERT INTO "${entitySchema}".official_receipt_line (
         official_receipt_id, description, amount, vat_exempt_sales, vat_sales, vat_amount
-      ) VALUES ($1, $2, $3, $4, $5, $6)`,
+      ) VALUES ($1::uuid, $2, $3, $4, $5, $6)`,
       orId,
       isDeposit ? "Enrollment Deposit" : "Tuition Payment",
       payment.amount,

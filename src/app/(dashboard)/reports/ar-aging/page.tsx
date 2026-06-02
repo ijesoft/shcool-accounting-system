@@ -4,6 +4,7 @@ import { hasPermission } from "@/lib/auth/rbac"
 import { redirect } from "next/navigation"
 import { prisma } from "@/lib/db"
 import { revenueRecognitionService } from "@/services/revenue-recognition.service"
+import { formatAmount } from "@/lib/utils"
 
 export const dynamic = "force-dynamic"
 
@@ -87,12 +88,12 @@ export default async function ArAgingReportPage() {
                   </Link>
                 </td>
                 <td className="p-3">{row.full_name}</td>
-                <td className="p-3 text-right font-mono">{Number(row.current).toFixed(2)}</td>
-                <td className="p-3 text-right font-mono">{Number(row.days_1_30).toFixed(2)}</td>
-                <td className="p-3 text-right font-mono">{Number(row.days_31_60).toFixed(2)}</td>
-                <td className="p-3 text-right font-mono">{Number(row.days_61_90).toFixed(2)}</td>
-                <td className="p-3 text-right font-mono">{Number(row.days_91_plus).toFixed(2)}</td>
-                <td className="p-3 text-right font-mono">{Number(row.total_balance).toFixed(2)}</td>
+                <td className="p-3 text-right font-mono">{formatAmount(Number(row.current))}</td>
+                <td className="p-3 text-right font-mono">{formatAmount(Number(row.days_1_30))}</td>
+                <td className="p-3 text-right font-mono">{formatAmount(Number(row.days_31_60))}</td>
+                <td className="p-3 text-right font-mono">{formatAmount(Number(row.days_61_90))}</td>
+                <td className="p-3 text-right font-mono">{formatAmount(Number(row.days_91_plus))}</td>
+                <td className="p-3 text-right font-mono">{formatAmount(Number(row.total_balance))}</td>
               </tr>
             ))}
           </tbody>
@@ -100,12 +101,12 @@ export default async function ArAgingReportPage() {
             <tfoot>
               <tr className="font-medium border-t bg-muted/30">
                 <td colSpan={2} className="p-3 text-right">Totals</td>
-                <td className="p-3 text-right font-mono">{totals.current.toFixed(2)}</td>
-                <td className="p-3 text-right font-mono">{totals.days_1_30.toFixed(2)}</td>
-                <td className="p-3 text-right font-mono">{totals.days_31_60.toFixed(2)}</td>
-                <td className="p-3 text-right font-mono">{totals.days_61_90.toFixed(2)}</td>
-                <td className="p-3 text-right font-mono">{totals.days_91_plus.toFixed(2)}</td>
-                <td className="p-3 text-right font-mono">{totals.total_balance.toFixed(2)}</td>
+                <td className="p-3 text-right font-mono">{formatAmount(totals.current)}</td>
+                <td className="p-3 text-right font-mono">{formatAmount(totals.days_1_30)}</td>
+                <td className="p-3 text-right font-mono">{formatAmount(totals.days_31_60)}</td>
+                <td className="p-3 text-right font-mono">{formatAmount(totals.days_61_90)}</td>
+                <td className="p-3 text-right font-mono">{formatAmount(totals.days_91_plus)}</td>
+                <td className="p-3 text-right font-mono">{formatAmount(totals.total_balance)}</td>
               </tr>
             </tfoot>
           )}

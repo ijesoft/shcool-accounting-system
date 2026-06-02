@@ -3,6 +3,7 @@ import { hasPermission } from "@/lib/auth/rbac"
 import { redirect } from "next/navigation"
 import { reportService } from "@/services/report.service"
 import { prisma } from "@/lib/db"
+import { formatAmount } from "@/lib/utils"
 
 async function getData(entityId: string, periodId?: string) {
   const entity = await prisma.entity.findUnique({ where: { id: entityId } })
@@ -59,16 +60,16 @@ export default async function TrialBalancePage({
                   <td className="p-3 font-mono text-xs">{account.account_code}</td>
                   <td className="p-3">{account.account_name}</td>
                   <td className="p-3 text-xs capitalize">{account.account_type}</td>
-                  <td className="p-3 text-right font-mono">{Number(account.total_debits).toFixed(2)}</td>
-                  <td className="p-3 text-right font-mono">{Number(account.total_credits).toFixed(2)}</td>
+                  <td className="p-3 text-right font-mono">{formatAmount(Number(account.total_debits))}</td>
+                  <td className="p-3 text-right font-mono">{formatAmount(Number(account.total_credits))}</td>
                 </tr>
               ))}
             </tbody>
             <tfoot>
               <tr className="border-t font-medium">
                 <td colSpan={3} className="p-3 text-right">Totals</td>
-                <td className="p-3 text-right font-mono">{Number(data.totalDebits).toFixed(2)}</td>
-                <td className="p-3 text-right font-mono">{Number(data.totalCredits).toFixed(2)}</td>
+                <td className="p-3 text-right font-mono">{formatAmount(Number(data.totalDebits))}</td>
+                <td className="p-3 text-right font-mono">{formatAmount(Number(data.totalCredits))}</td>
               </tr>
             </tfoot>
           </table>

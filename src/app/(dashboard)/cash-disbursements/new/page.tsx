@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
+import { formatAmount } from "@/lib/utils"
 
 export default function NewDisbursementPage() {
   const router = useRouter()
@@ -114,7 +115,7 @@ export default function NewDisbursementPage() {
               <Input id="wtRate" type="number" step="0.01" value={withholdingTaxRate} onChange={e => setWithholdingTaxRate(e.target.value)} placeholder="e.g. 1 for 1%" />
               {wtRate > 0 && (
                 <p className="text-xs text-muted-foreground">
-                  WT Amount: {wtAmount.toFixed(2)} | Net: {netAmount.toFixed(2)}
+                  WT Amount: {formatAmount(wtAmount)} | Net: {formatAmount(netAmount)}
                 </p>
               )}
             </div>

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation"
 import { reportService } from "@/services/report.service"
 import { prisma } from "@/lib/db"
 import Link from "next/link"
+import { formatAmount } from "@/lib/utils"
 
 async function getData(entityId: string, from: string, to: string, comparative: boolean) {
   const entity = await prisma.entity.findUnique({ where: { id: entityId } })
@@ -113,10 +114,10 @@ export default async function IncomeStatementPage({
                 return (
                   <tr key={row.account_code} className="border-b hover:bg-muted/50 transition-colors">
                     <td className="p-4 pl-8 text-foreground">{row.account_name} ({row.account_code})</td>
-                    <td className="p-4 text-right font-mono">{Number(row.balance).toFixed(2)}</td>
+                    <td className="p-4 text-right font-mono">{formatAmount(Number(row.balance))}</td>
                     {comparative && (
                       <td className="p-4 text-right font-mono text-muted-foreground">
-                        {compRow ? Number(compRow.balance).toFixed(2) : "0.00"}
+                        {compRow ? formatAmount(Number(compRow.balance)) : "0.00"}
                       </td>
                     )}
                   </tr>
@@ -124,9 +125,9 @@ export default async function IncomeStatementPage({
               })}
               <tr className="border-b font-semibold bg-muted/10">
                 <td className="p-4 pl-8">Total Revenue</td>
-                <td className="p-4 text-right font-mono">{currentRevenue.toFixed(2)}</td>
+                <td className="p-4 text-right font-mono">{formatAmount(currentRevenue)}</td>
                 {comparative && (
-                  <td className="p-4 text-right font-mono text-muted-foreground">{compRevenue.toFixed(2)}</td>
+                  <td className="p-4 text-right font-mono text-muted-foreground">{formatAmount(compRevenue)}</td>
                 )}
               </tr>
 
@@ -138,10 +139,10 @@ export default async function IncomeStatementPage({
                 return (
                   <tr key={row.account_code} className="border-b hover:bg-muted/50 transition-colors">
                     <td className="p-4 pl-8 text-foreground">{row.account_name} ({row.account_code})</td>
-                    <td className="p-4 text-right font-mono">{Math.abs(Number(row.balance)).toFixed(2)}</td>
+                    <td className="p-4 text-right font-mono">{formatAmount(Math.abs(Number(row.balance)), { sign: "never" })}</td>
                     {comparative && (
                       <td className="p-4 text-right font-mono text-muted-foreground">
-                        {compRow ? Math.abs(Number(compRow.balance)).toFixed(2) : "0.00"}
+                        {compRow ? formatAmount(Math.abs(Number(compRow.balance)), { sign: "never" }) : "0.00"}
                       </td>
                     )}
                   </tr>
@@ -149,9 +150,9 @@ export default async function IncomeStatementPage({
               })}
               <tr className="border-b font-semibold bg-muted/10">
                 <td className="p-4 pl-8">Total Expenses</td>
-                <td className="p-4 text-right font-mono">{currentExpenses.toFixed(2)}</td>
+                <td className="p-4 text-right font-mono">{formatAmount(currentExpenses)}</td>
                 {comparative && (
-                  <td className="p-4 text-right font-mono text-muted-foreground">{compExpenses.toFixed(2)}</td>
+                  <td className="p-4 text-right font-mono text-muted-foreground">{formatAmount(compExpenses)}</td>
                 )}
               </tr>
             </tbody>
@@ -159,11 +160,11 @@ export default async function IncomeStatementPage({
               <tr className="border-t-2 font-bold text-base bg-muted/20">
                 <td className="p-4">Net Income (Loss)</td>
                 <td className={`p-4 text-right font-mono ${currentNetIncome >= 0 ? "text-emerald-600" : "text-red-600"}`}>
-                  {currentNetIncome.toFixed(2)}
+                  {formatAmount(currentNetIncome)}
                 </td>
                 {comparative && (
                   <td className={`p-4 text-right font-mono ${compNetIncome >= 0 ? "text-emerald-600/70" : "text-red-600/70"}`}>
-                    {compNetIncome.toFixed(2)}
+                    {formatAmount(compNetIncome)}
                   </td>
                 )}
               </tr>

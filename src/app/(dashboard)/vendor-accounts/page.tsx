@@ -3,6 +3,7 @@ import { getSession } from "@/lib/auth/session"
 import { hasPermission } from "@/lib/auth/rbac"
 import { redirect } from "next/navigation"
 import { vendorAccountService } from "@/services/vendor-account.service"
+import { formatAmount } from "@/lib/utils"
 import { prisma } from "@/lib/db"
 import { SearchPagination } from "@/components/ui/search-pagination"
 
@@ -67,7 +68,7 @@ export default async function VendorAccountsPage({
                   <td className="p-3 text-xs">{v.contact_person || "—"}</td>
                   <td className="p-3 font-mono text-xs">{v.tin || "—"}</td>
                   <td className="p-3 text-xs">{v.payment_terms || "—"}</td>
-                  <td className="p-3 text-right font-mono">{(Number(v.total_balance) || 0).toFixed(2)}</td>
+                  <td className="p-3 text-right font-mono">{formatAmount(Number(v.total_balance) || 0)}</td>
                 </tr>
               ))}
             </tbody>

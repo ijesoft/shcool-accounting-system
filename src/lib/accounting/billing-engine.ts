@@ -207,7 +207,7 @@ export const billingEngine = {
     }
 
     await prisma.$queryRawUnsafe(
-      `UPDATE "${entitySchema}".student_invoice SET journal_entry_id = $1, updated_at = NOW() WHERE id = $2`,
+      `UPDATE "${entitySchema}".student_invoice SET journal_entry_id = $1::uuid, updated_at = NOW() WHERE id = $2::uuid`,
       entry.id,
       data.invoiceId
     )

@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
+import { formatAmount } from "@/lib/utils"
 
 export function EnrollmentDepositActions({
   depositId,
@@ -56,7 +57,7 @@ export function EnrollmentDepositActions({
             <option value="">Apply to invoice...</option>
             {openInvoices.map((inv) => (
               <option key={inv.id} value={inv.id}>
-                {inv.invoice_number} (bal {Number(inv.balance).toFixed(2)})
+                {inv.invoice_number} (bal {formatAmount(Number(inv.balance))})
               </option>
             ))}
           </select>

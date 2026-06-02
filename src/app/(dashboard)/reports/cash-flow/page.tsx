@@ -3,6 +3,7 @@ import { hasPermission } from "@/lib/auth/rbac"
 import { redirect } from "next/navigation"
 import { reportService } from "@/services/report.service"
 import { prisma } from "@/lib/db"
+import { formatAmount } from "@/lib/utils"
 
 async function getData(entityId: string, from: string, to: string) {
   const entity = await prisma.entity.findUnique({ where: { id: entityId } })
@@ -69,14 +70,14 @@ export default async function CashFlowPage({
                     <tr key={`${section.key}-${i}`} className="border-b hover:bg-muted/50">
                       <td className="p-3 pl-8">{entry.label}</td>
                       <td className={`p-3 text-right font-mono ${entry.amount >= 0 ? "" : "text-red-600"}`}>
-                        {entry.amount.toFixed(2)}
+                        {formatAmount(entry.amount)}
                       </td>
                     </tr>
                   ))}
                   <tr className="border-b font-medium">
                     <td className="p-3 pl-8">Net {section.label}</td>
                     <td className={`p-3 text-right font-mono ${data.totals[section.key] >= 0 ? "" : "text-red-600"}`}>
-                      {data.totals[section.key].toFixed(2)}
+                      {formatAmount(data.totals[section.key])}
                     </td>
                   </tr>
                 </>
@@ -86,7 +87,7 @@ export default async function CashFlowPage({
               <tr className="border-t font-bold text-lg">
                 <td className="p-3">Net Cash Flow</td>
                 <td className={`p-3 text-right font-mono ${data.totals.net >= 0 ? "text-green-600" : "text-red-600"}`}>
-                  {data.totals.net.toFixed(2)}
+                  {formatAmount(data.totals.net)}
                 </td>
               </tr>
             </tfoot>

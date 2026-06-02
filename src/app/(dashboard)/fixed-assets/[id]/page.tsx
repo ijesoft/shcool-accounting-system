@@ -4,6 +4,7 @@ import { redirect } from "next/navigation"
 import { fixedAssetService } from "@/services/fixed-asset.service"
 import { prisma } from "@/lib/db"
 import { AssetActions } from "./asset-actions"
+import { formatAmount } from "@/lib/utils"
 
 export const dynamic = "force-dynamic"
 
@@ -40,15 +41,15 @@ export default async function FixedAssetDetailPage({ params }: { params: Promise
           </div>
           <div>
             <p className="text-sm text-muted-foreground">Cost</p>
-            <p className="font-mono">{Number(asset.acquisition_cost).toFixed(2)}</p>
+            <p className="font-mono">{formatAmount(Number(asset.acquisition_cost))}</p>
           </div>
           <div>
             <p className="text-sm text-muted-foreground">Accum. Depreciation</p>
-            <p className="font-mono">{Number(asset.accumulated_depreciation).toFixed(2)}</p>
+            <p className="font-mono">{formatAmount(Number(asset.accumulated_depreciation))}</p>
           </div>
           <div>
             <p className="text-sm text-muted-foreground">Net Book Value</p>
-            <p className="font-mono">{(Number(asset.acquisition_cost) - Number(asset.accumulated_depreciation)).toFixed(2)}</p>
+            <p className="font-mono">{(Number(asset.acquisition_cost) - formatAmount(Number(asset.accumulated_depreciation)))}</p>
           </div>
           <div>
             <p className="text-sm text-muted-foreground">Life (Years)</p>
@@ -56,7 +57,7 @@ export default async function FixedAssetDetailPage({ params }: { params: Promise
           </div>
           <div>
             <p className="text-sm text-muted-foreground">Salvage Value</p>
-            <p className="font-mono">{Number(asset.salvage_value).toFixed(2)}</p>
+            <p className="font-mono">{formatAmount(Number(asset.salvage_value))}</p>
           </div>
           <div>
             <p className="text-sm text-muted-foreground">Status</p>
@@ -70,7 +71,7 @@ export default async function FixedAssetDetailPage({ params }: { params: Promise
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Disposal Amount</p>
-                <p className="font-mono">{Number(asset.disposal_amount).toFixed(2)}</p>
+                <p className="font-mono">{formatAmount(Number(asset.disposal_amount))}</p>
               </div>
             </>
           )}
@@ -97,7 +98,7 @@ export default async function FixedAssetDetailPage({ params }: { params: Promise
             {(asset.depreciation_schedule || []).map((d: any) => (
               <tr key={d.id} className="border-b">
                 <td className="p-3 text-xs">{d.fiscal_period_id?.slice(0, 8) || "—"}</td>
-                <td className="p-3 text-right font-mono">{Number(d.depreciation_amount).toFixed(2)}</td>
+                <td className="p-3 text-right font-mono">{formatAmount(Number(d.depreciation_amount))}</td>
                 <td className="p-3 text-xs font-mono">{d.entry_number || "—"}</td>
                 <td className="p-3 text-xs">{new Date(d.created_at).toLocaleDateString()}</td>
               </tr>

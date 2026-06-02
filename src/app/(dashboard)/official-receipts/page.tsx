@@ -5,6 +5,7 @@ import { redirect } from "next/navigation"
 import { prisma } from "@/lib/db"
 import { officialReceiptService } from "@/services/official-receipt.service"
 import { SearchPagination } from "@/components/ui/search-pagination"
+import { formatAmount } from "@/lib/utils"
 
 export const dynamic = "force-dynamic"
 
@@ -62,7 +63,7 @@ export default async function OfficialReceiptsPage({
                 </td>
                 <td className="p-3">{new Date(r.or_date).toLocaleDateString()}</td>
                 <td className="p-3">{r.payor_name || "—"}</td>
-                <td className="p-3 text-right font-mono">{Number(r.amount).toFixed(2)}</td>
+                <td className="p-3 text-right font-mono">{formatAmount(Number(r.amount))}</td>
                 <td className="p-3 text-xs">{r.payment_ref || "—"}</td>
                 <td className="p-3 text-xs capitalize">{r.status || "active"}</td>
               </tr>

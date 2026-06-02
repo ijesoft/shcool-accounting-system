@@ -6,6 +6,8 @@ import { cashReceiptsService } from "@/services/cash-receipts.service"
 import { prisma } from "@/lib/db"
 import { Button } from "@/components/ui/button"
 import { SearchPagination } from "@/components/ui/search-pagination"
+import { PostReceiptButton } from "./post-receipt-button"
+import { formatAmount } from "@/lib/utils"
 
 export const dynamic = "force-dynamic"
 
@@ -56,19 +58,23 @@ export default async function CashReceiptsPage({
               <th className="text-right p-3 font-medium">Amount</th>
               <th className="text-left p-3 font-medium">Method</th>
               <th className="text-center p-3 font-medium">Posted</th>
+              <th className="text-right p-3 font-medium">Action</th>
             </tr>
           </thead>
           <tbody>
-            {receipts.length === 0 && <tr><td colSpan={7} className="text-center p-6 text-muted-foreground">No receipts found.</td></tr>}
+            {receipts.length === 0 && <tr><td colSpan={8} className="text-center p-6 text-muted-foreground">No receipts found.</td></tr>}
             {receipts.map((r: any) => (
               <tr key={r.id} className="border-b hover:bg-muted/50">
                 <td className="p-3 font-mono text-xs">{r.transaction_number}</td>
                 <td className="p-3">{new Date(r.payment_date).toLocaleDateString()}</td>
                 <td className="p-3">{r.student_name || "—"}</td>
                 <td className="p-3 text-xs">{r.invoice_number || "—"}</td>
-                <td className="p-3 text-right font-mono">{Number(r.amount).toFixed(2)}</td>
+                <td className="p-3 text-right font-mono">{formatAmount(Number(r.amount))}</td>
                 <td className="p-3 text-xs">{r.payment_method}</td>
                 <td className="p-3 text-center">{r.journal_entry_id ? "✓" : "—"}</td>
+                <td className="p-3 text-right">
+                  {!r.journal_entry_id && <PostReceiptButton id={r.id} />}
+                </td>
               </tr>
             ))}
           </tbody>

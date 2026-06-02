@@ -7,12 +7,28 @@ import { AddAccount } from "./add-account"
 
 async function getAccounts(entityId: string) {
   const entity = await prisma.entity.findUnique({ where: { id: entityId } })
-  if (!entity) return []
+  if (!entity) return { accounts: [], balances: {} as Record<string, { debit: number; credit: number }> }
 
   const accounts = await prisma.$queryRawUnsafe<any[]>(
     `SELECT * FROM "${entity.schemaName}"."account" ORDER BY account_code`
   )
-  return accounts
+
+  const activity = await prisma.$queryRawUnsafe<any[]>(
+    `SELECT jel.account_id::text as account_id,
+            COALESCE(SUM(jel.debit), 0)::float8 as total_debit,
+            COALESCE(SUM(jel.credit), 0)::float8 as total_credit
+     FROM "${entity.schemaName}".journal_entry_line jel
+     JOIN "${entity.schemaName}".journal_entry je ON je.id = jel.journal_entry_id
+     WHERE je.status = 'posted'
+     GROUP BY jel.account_id`
+  )
+
+  const balances: Record<string, { debit: number; credit: number }> = {}
+  for (const r of activity) {
+    balances[r.account_id] = { debit: r.total_debit, credit: r.total_credit }
+  }
+
+  return { accounts, balances }
 }
 
 export default async function AccountsPage() {
@@ -32,7 +48,7 @@ export default async function AccountsPage() {
     )
   }
 
-  const accounts = await getAccounts(session.entityId)
+  const { accounts, balances } = await getAccounts(session.entityId)
 
   return (
     <div className="space-y-6">
@@ -43,7 +59,7 @@ export default async function AccountsPage() {
           <AddAccount accounts={accounts} />
         </div>
       </div>
-      <AccountTreeView accounts={accounts} />
+      <AccountTreeView accounts={accounts} balances={balances} />
     </div>
   )
 }

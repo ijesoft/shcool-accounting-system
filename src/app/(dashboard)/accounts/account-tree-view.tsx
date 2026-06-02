@@ -1,8 +1,10 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
 import { ChevronDown, ChevronRight } from "lucide-react"
 import { AddAccount } from "./add-account"
+import { formatAmount } from "@/lib/utils"
 
 interface Account {
   id: string
@@ -15,7 +17,39 @@ interface Account {
   parent_id: string | null
 }
 
+type Balances = Record<string, { debit: number; credit: number }>
+
 type TreeNode = Account & { children: TreeNode[] }
+
+function nodeBalance(node: TreeNode, balances: Balances): { debit: number; credit: number; isLeaf: boolean } {
+  const own = balances[node.id] ?? { debit: 0, credit: 0 }
+  if (node.children.length === 0) {
+    return { ...own, isLeaf: true }
+  }
+  let debit = own.debit
+  let credit = own.credit
+  for (const c of node.children) {
+    const sub = nodeBalance(c, balances)
+    debit += sub.debit
+    credit += sub.credit
+  }
+  return { debit, credit, isLeaf: false }
+}
+
+function formatBalance(node: TreeNode, balances: Balances): { text: string; label: string; hasActivity: boolean } {
+  const { debit, credit, isLeaf } = nodeBalance(node, balances)
+  const hasActivity = debit > 0 || credit > 0
+  if (!hasActivity) {
+    return { text: "—", label: "", hasActivity: false }
+  }
+  const signed = node.normal_balance === "debit" ? debit - credit : credit - debit
+  const abs = Math.abs(signed)
+  const isAbnormal = signed < 0
+  const label = isAbnormal
+    ? (node.normal_balance === "debit" ? "Cr" : "Dr")
+    : (node.normal_balance === "debit" ? "Dr" : "Cr")
+  return { text: formatAmount(abs), label, hasActivity: true }
+}
 
 const CATEGORY_CONFIG: Record<
   string,
@@ -107,13 +141,17 @@ function AccountNode({
   account,
   depth,
   allAccounts,
+  balances,
 }: {
   account: TreeNode
   depth: number
   allAccounts: Account[]
+  balances: Balances
 }) {
   const [expanded, setExpanded] = useState(depth < 2)
   const hasChildren = account.children.length > 0
+
+  const bal = formatBalance(account, balances)
 
   return (
     <div>
@@ -140,13 +178,26 @@ function AccountNode({
           )}
         </button>
 
-        {/* code */}
-        <span className="font-mono text-xs font-medium text-muted-foreground w-14 flex-shrink-0">
-          {account.account_code}
-        </span>
+        {/* code + name as link */}
+        <Link
+          href={`/accounts/${account.id}`}
+          className="flex items-center gap-2 flex-1 min-w-0 hover:text-blue-600"
+        >
+          <span className="font-mono text-xs font-medium text-muted-foreground w-14 flex-shrink-0">
+            {account.account_code}
+          </span>
+          <span className="text-sm flex-1 truncate">{account.account_name}</span>
+        </Link>
 
-        {/* name */}
-        <span className="text-sm flex-1 truncate">{account.account_name}</span>
+        {/* balance */}
+        <span
+          className={`text-right font-mono text-xs flex-shrink-0 w-36 ${
+            bal.hasActivity ? "text-foreground" : "text-muted-foreground/50"
+          }`}
+        >
+          {bal.text}
+          {bal.label && <span className="ml-1 text-[10px] text-muted-foreground">{bal.label}</span>}
+        </span>
 
         {/* type badge — only for non-standard types */}
         {account.account_type.startsWith("contra_") && (
@@ -186,6 +237,7 @@ function AccountNode({
               account={child}
               depth={depth + 1}
               allAccounts={allAccounts}
+              balances={balances}
             />
           ))}
         </div>
@@ -198,10 +250,12 @@ function CategorySection({
   category,
   nodes,
   allAccounts,
+  balances,
 }: {
   category: string
   nodes: TreeNode[]
   allAccounts: Account[]
+  balances: Balances
 }) {
   const [expanded, setExpanded] = useState(true)
   const cfg = CATEGORY_CONFIG[category] ?? {
@@ -255,6 +309,7 @@ function CategorySection({
               account={node}
               depth={0}
               allAccounts={allAccounts}
+              balances={balances}
             />
           ))}
         </div>
@@ -265,7 +320,7 @@ function CategorySection({
 
 const CATEGORY_ORDER = ["asset", "liability", "equity", "revenue", "expense"]
 
-export function AccountTreeView({ accounts }: { accounts: Account[] }) {
+export function AccountTreeView({ accounts, balances }: { accounts: Account[]; balances: Balances }) {
   const tree = buildTree(accounts)
   const groups = groupByCategory(tree)
   const extras = Object.keys(groups).filter((k) => !CATEGORY_ORDER.includes(k))
@@ -280,6 +335,7 @@ export function AccountTreeView({ accounts }: { accounts: Account[] }) {
             category={cat}
             nodes={groups[cat]}
             allAccounts={accounts}
+            balances={balances}
           />
         )
       })}

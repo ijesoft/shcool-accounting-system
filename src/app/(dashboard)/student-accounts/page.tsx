@@ -5,6 +5,8 @@ import { redirect } from "next/navigation"
 import { studentAccountService } from "@/services/student-account.service"
 import { prisma } from "@/lib/db"
 import { SearchPagination } from "@/components/ui/search-pagination"
+import { CreateStudentDialog } from "./create-student-dialog"
+import { formatAmount } from "@/lib/utils"
 
 export const dynamic = "force-dynamic"
 
@@ -31,7 +33,12 @@ export default async function StudentAccountsPage({
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Student Accounts</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold">Student Accounts</h1>
+        {hasPermission(session.roleName, "student_accounts", "create") && (
+          <CreateStudentDialog />
+        )}
+      </div>
       <div className="rounded-lg border bg-card">
         <div className="px-4">
           <SearchPagination
@@ -63,7 +70,7 @@ export default async function StudentAccountsPage({
                   <td className="p-3">{s.full_name}</td>
                   <td className="p-3 text-xs">{s.course || s.grade_level || "—"}</td>
                   <td className="p-3 text-xs capitalize">{s.status}</td>
-                  <td className="p-3 text-right font-mono">{Number(s.total_balance).toFixed(2)}</td>
+                  <td className="p-3 text-right font-mono">{formatAmount(Number(s.total_balance))}</td>
                 </tr>
               ))}
             </tbody>
