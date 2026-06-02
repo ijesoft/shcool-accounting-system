@@ -12,7 +12,7 @@ async function getEntry(entityId: string, entryId: string) {
   if (!entity) return null
 
   const entries = await prisma.$queryRawUnsafe<any[]>(
-    `SELECT * FROM "${entity.schemaName}".journal_entry WHERE id = $1`,
+    `SELECT * FROM "${entity.schemaName}".journal_entry WHERE id = $1::uuid`,
     entryId
   )
   if (!entries[0]) return null
@@ -21,7 +21,7 @@ async function getEntry(entityId: string, entryId: string) {
     `SELECT jel.*, a.account_code, a.account_name 
      FROM "${entity.schemaName}".journal_entry_line jel
      JOIN "${entity.schemaName}".account a ON a.id = jel.account_id
-     WHERE jel.journal_entry_id = $1
+     WHERE jel.journal_entry_id = $1::uuid
      ORDER BY jel.line_order`,
     entryId
   )

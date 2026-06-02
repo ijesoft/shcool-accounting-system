@@ -20,8 +20,8 @@ export default async function OfficialReceiptDetailPage({ params }: { params: Pr
   const rows = await prisma.$queryRawUnsafe<any[]>(
     `SELECT or_.*, pt.transaction_number as payment_ref, pt.payment_method, pt.payment_date, pt.amount as payment_amount
      FROM "${entity.schemaName}".official_receipt or_
-     LEFT JOIN "${entity.schemaName}".payment_transaction pt ON pt.id = or_.cash_receipt_id
-     WHERE or_.id = $1`, id
+     LEFT JOIN "${entity.schemaName}".payment_transaction pt ON pt.official_receipt_id = or_.id
+     WHERE or_.id = $1::uuid`, id
   )
   const or = rows[0]
   if (!or) return <p className="p-6 text-muted-foreground">Receipt not found.</p>

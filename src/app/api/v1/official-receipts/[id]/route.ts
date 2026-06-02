@@ -25,7 +25,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       `SELECT or_.*, pt.transaction_number as payment_ref, pt.payment_method, pt.amount as payment_amount
        FROM "${schema}".official_receipt or_
        LEFT JOIN "${schema}".payment_transaction pt ON pt.id = or_.cash_receipt_id
-       WHERE or_.id = $1`, id
+       WHERE or_.id = $1::uuid`, id
     )
     if (!rows[0]) return NextResponse.json(formatApiError("ERR_NOT_FOUND", "OR not found"), { status: 404 })
     return NextResponse.json(formatApiResponse(rows[0]))
