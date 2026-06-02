@@ -3,9 +3,11 @@ import { hasPermission } from "@/lib/auth/rbac"
 import { redirect } from "next/navigation"
 import { prisma } from "@/lib/db"
 import { Button } from "@/components/ui/button"
+import { formatAmount } from "@/lib/utils"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import Link from "next/link"
 import { JournalEntryWorkflow } from "./workflow-buttons"
+import { ApplyButton } from "./apply-button"
 
 async function getEntry(entityId: string, entryId: string) {
   const entity = await prisma.entity.findUnique({ where: { id: entityId } })
@@ -18,9 +20,18 @@ async function getEntry(entityId: string, entryId: string) {
   if (!entries[0]) return null
 
   const lines = await prisma.$queryRawUnsafe<any[]>(
-    `SELECT jel.*, a.account_code, a.account_name 
+    `SELECT jel.*, a.account_code, a.account_name,
+            CASE jel.party_type
+              WHEN 'student'  THEN s.full_name
+              WHEN 'vendor'   THEN v.vendor_name
+              WHEN 'employee' THEN e.full_name
+              ELSE NULL
+            END as party_name
      FROM "${entity.schemaName}".journal_entry_line jel
      JOIN "${entity.schemaName}".account a ON a.id = jel.account_id
+     LEFT JOIN "${entity.schemaName}".student        s ON jel.party_type = 'student'  AND s.id = jel.party_id
+     LEFT JOIN "${entity.schemaName}".vendor_account v ON jel.party_type = 'vendor'   AND v.id = jel.party_id
+     LEFT JOIN "${entity.schemaName}".employee       e ON jel.party_type = 'employee' AND e.id = jel.party_id
      WHERE jel.journal_entry_id = $1::uuid
      ORDER BY jel.line_order`,
     entryId
@@ -95,23 +106,17 @@ export default async function JournalEntryDetailPage({ params }: { params: Promi
             </thead>
             <tbody>
               {entry.lines.map((line: any) => (
-                <tr key={line.id} className="border-b">
-                  <td className="p-2">{line.account_name}</td>
-                  <td className="p-2 font-mono text-xs">{line.account_code}</td>
-                  <td className="p-2 text-right font-mono">{Number(line.debit) > 0 ? Number(line.debit).toFixed(2) : ""}</td>
-                  <td className="p-2 text-right font-mono">{Number(line.credit) > 0 ? Number(line.credit).toFixed(2) : ""}</td>
-                  <td className="p-2 text-xs text-muted-foreground">{line.line_description || ""}</td>
-                </tr>
+                <LineRow key={line.id} line={line} entryId={id} entryStatus={entry.status} />
               ))}
             </tbody>
             <tfoot>
               <tr className="font-medium">
                 <td colSpan={2} className="p-2 text-right">Totals</td>
                 <td className="p-2 text-right font-mono">
-                  {entry.lines.reduce((s: number, l: any) => s + Number(l.debit), 0).toFixed(2)}
+                  {formatAmount(entry.lines.reduce((s: number, l: any) => s + Number(l.debit), 0))}
                 </td>
                 <td className="p-2 text-right font-mono">
-                  {entry.lines.reduce((s: number, l: any) => s + Number(l.credit), 0).toFixed(2)}
+                  {formatAmount(entry.lines.reduce((s: number, l: any) => s + Number(l.credit), 0))}
                 </td>
                 <td></td>
               </tr>
@@ -120,5 +125,40 @@ export default async function JournalEntryDetailPage({ params }: { params: Promi
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+function LineRow({ line, entryId, entryStatus }: { line: any; entryId: string; entryStatus: string }) {
+  const isTagged = !!line.party_type
+  return (
+    <>
+      <tr className="border-b">
+        <td className="p-2">{line.account_name}</td>
+        <td className="p-2 font-mono text-xs">{line.account_code}</td>
+        <td className="p-2 text-right font-mono">{Number(line.debit) > 0 ? formatAmount(Number(line.debit)) : ""}</td>
+        <td className="p-2 text-right font-mono">{Number(line.credit) > 0 ? formatAmount(Number(line.credit)) : ""}</td>
+        <td className="p-2 text-xs text-muted-foreground">{line.line_description || ""}</td>
+      </tr>
+      {isTagged && (
+        <tr className="bg-muted/30">
+          <td colSpan={5} className="p-3 text-xs">
+            <span className="font-medium">Party:</span>{" "}
+            {line.party_name || line.party_id} ({line.party_type})
+            {entryStatus === "posted" && line.party_type !== "employee" && (
+              <ApplyButton
+                entryId={entryId}
+                lineId={line.id}
+                partyType={line.party_type}
+                partyId={line.party_id}
+                lineAmount={Math.max(Number(line.debit), Number(line.credit))}
+              />
+            )}
+            {entryStatus === "posted" && line.party_type === "employee" && (
+              <p className="mt-1 text-muted-foreground">Apply not supported for employee AP yet.</p>
+            )}
+          </td>
+        </tr>
+      )}
+    </>
   )
 }
