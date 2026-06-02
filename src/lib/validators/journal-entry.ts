@@ -6,9 +6,14 @@ export const journalEntryLineSchema = z.object({
   credit: z.number().min(0).default(0),
   lineDescription: z.string().optional(),
   lineOrder: z.number().int().min(0),
+  partyType: z.enum(["student", "vendor", "employee"]).optional(),
+  partyId: z.string().uuid().optional(),
 }).refine(
   (data) => data.debit > 0 || data.credit > 0,
   { message: "Each line must have either a debit or credit amount" }
+).refine(
+  (data) => (data.partyType == null) === (data.partyId == null),
+  { message: "partyType and partyId must both be set or both be empty" }
 )
 
 export const createJournalEntrySchema = z.object({
