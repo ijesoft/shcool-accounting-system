@@ -62,7 +62,7 @@ export const cashReceiptsService = {
        VALUES (
          (SELECT CONCAT(prefix, '-', LPAD(CAST(next_number AS TEXT), 6, '0'))
           FROM "${entitySchema}".number_series WHERE series_type = 'PMT' LIMIT 1),
-         $1, $2, $3::date, $4, $5, $6, $7::date, $8, $9, $10, $11, $12, $13, $14
+         $1::uuid, $2::uuid, $3::date, $4, $5, $6, $7::date, $8, $9, $10, $11, $12, $13, $14
        ) RETURNING *`,
       data.studentId || null, data.invoiceId || null, data.paymentDate, data.amount,
       data.paymentMethod, data.checkNumber || null, data.checkDate || null, data.bankName || null, data.reference || null,
@@ -92,7 +92,7 @@ export const cashReceiptsService = {
     const vatRate = bir.vatRate ?? 12
 
     const isDeposit = payment.payment_type === "enrollment_deposit"
-    const creditAccountCode = isDeposit ? "21800" : "11210"
+    const creditAccountCode = isDeposit ? "21320" : "11210"
     const debitAccountCode = "11120"
 
     const accounts = await prisma.$queryRawUnsafe<any[]>(
@@ -165,7 +165,7 @@ export const cashReceiptsService = {
       ) VALUES (
         (SELECT CONCAT(prefix, '-', LPAD(CAST(next_number AS TEXT), 6, '0'))
          FROM "${entitySchema}".number_series WHERE series_type = 'OR' LIMIT 1),
-        $1::date, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16
+        $1::date, $2::uuid, $3::uuid, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16
       ) RETURNING *`,
       payment.payment_date,
       payment.id,

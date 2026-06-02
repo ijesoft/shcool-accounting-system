@@ -32,7 +32,7 @@ export default function NewCashReceiptPage() {
   useEffect(() => {
     fetch("/api/v1/student-accounts")
       .then(r => r.json())
-      .then(d => setStudents(d.data || []))
+      .then(d => setStudents(d.data?.rows ?? d.data ?? []))
       .catch(() => {})
   }, [])
 
