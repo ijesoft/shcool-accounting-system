@@ -161,7 +161,7 @@ export const financialStatementEngine = {
        JOIN "${entitySchema}".journal_entry je ON je.id = jel.journal_entry_id
          AND je.status = 'posted'
          AND je.entry_date >= $1::date AND je.entry_date <= $2::date
-       WHERE a.account_code = '51400'`,
+       WHERE a.account_code LIKE '572%'`,
       fromDate, toDate
     )
 
@@ -173,7 +173,8 @@ export const financialStatementEngine = {
        JOIN "${entitySchema}".journal_entry je ON je.id = jel.journal_entry_id
          AND je.status = 'posted'
          AND je.entry_date >= $1::date AND je.entry_date <= $2::date
-       WHERE a.account_code IN ('11100', '11200', '11300', '11400', '11500', '11600', '21100', '21200', '21300', '21400', '21500', '21600', '21700', '21800', '21900')
+       WHERE (a.account_code LIKE '11%' AND a.account_type IN ('asset', 'contra_asset'))
+           OR (a.account_code LIKE '21%' AND a.account_type IN ('liability', 'contra_liability'))
        GROUP BY a.id, a.account_code, a.account_name`,
       fromDate, toDate
     )
@@ -186,7 +187,7 @@ export const financialStatementEngine = {
        JOIN "${entitySchema}".journal_entry je ON je.id = jel.journal_entry_id
          AND je.status = 'posted'
          AND je.entry_date >= $1::date AND je.entry_date <= $2::date
-       WHERE a.account_code IN ('12110', '12120', '12140', '12160', '12180')
+       WHERE a.account_code LIKE '121%' AND a.account_type IN ('asset', 'contra_asset')
        GROUP BY a.id, a.account_code, a.account_name`,
       fromDate, toDate
     )
@@ -199,7 +200,9 @@ export const financialStatementEngine = {
        JOIN "${entitySchema}".journal_entry je ON je.id = jel.journal_entry_id
          AND je.status = 'posted'
          AND je.entry_date >= $1::date AND je.entry_date <= $2::date
-       WHERE a.account_code IN ('22100', '31100', '31200', '31300')
+       WHERE (a.account_code LIKE '22%' AND a.account_type = 'liability')
+           OR (a.account_code LIKE '31%' AND a.account_type = 'equity')
+           OR (a.account_code LIKE '33%' AND a.account_type = 'equity')
        GROUP BY a.id, a.account_code, a.account_name`,
       fromDate, toDate
     )
@@ -281,8 +284,8 @@ export const financialStatementEngine = {
        LEFT JOIN "${entitySchema}".journal_entry je ON je.id = jel.journal_entry_id
          AND je.status = 'posted'
          AND je.entry_date < $1::date
-       WHERE a.account_type = 'equity' AND a.account_code IN ('31100', '31200', '31300')
-       GROUP BY a.id, a.account_code, a.account_name`,
+    WHERE a.account_type = 'equity' AND a.account_code IN ('31100', '31110', '31120', '31200', '31300', '32100', '33010', '33020', '33030')
+        GROUP BY a.id, a.account_code, a.account_name`,
       fromDate
     )
 
@@ -299,8 +302,8 @@ export const financialStatementEngine = {
        JOIN "${entitySchema}".journal_entry je ON je.id = jel.journal_entry_id
          AND je.status = 'posted'
          AND je.entry_date >= $1::date AND je.entry_date <= $2::date
-       WHERE a.account_type = 'equity' AND a.account_code IN ('31100', '31200', '31300')
-       GROUP BY a.id, a.account_code, a.account_name`,
+   WHERE a.account_type = 'equity' AND a.account_code IN ('31100', '31110', '31120', '31200', '31300', '32100', '33010', '33020', '33030')
+        GROUP BY a.id, a.account_code, a.account_name`,
       fromDate, toDate
     )
 

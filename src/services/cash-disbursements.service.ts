@@ -52,11 +52,11 @@ export const cashDisbursementsService = {
 
     const accounts = await prisma.$queryRawUnsafe<any[]>(
       `SELECT id, account_code FROM "${entitySchema}".account WHERE account_code IN ($1, $2, $3)`,
-      "11120", "21110", "21500"
+      "11121", "21110", "21430"
     )
-    const cashBankId = accounts.find((a: any) => a.account_code === "11120")?.id
+    const cashBankId = accounts.find((a: any) => a.account_code === "11121")?.id
     const apTradeId = accounts.find((a: any) => a.account_code === "21110")?.id
-    const wtpId = accounts.find((a: any) => a.account_code === "21500")?.id
+    const wtpId = accounts.find((a: any) => a.account_code === "21430")?.id
     if (!cashBankId) throw new Error("Cash in Bank account not found")
 
     const lines: { accountId: string; debit: number; credit: number }[] = []

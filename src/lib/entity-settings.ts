@@ -113,11 +113,11 @@ export function getRevenueAccountForFeeType(feeType: string): string {
   const key = feeType.trim().toLowerCase().replace(/\s+/g, "_")
   const map: Record<string, string> = {
     tuition: "41100",
-    misc: "41200",
-    miscellaneous: "41200",
-    laboratory: "41300",
-    lab: "41300",
-    other: "41400",
+    misc: "42600",
+    miscellaneous: "42600",
+    laboratory: "42100",
+    lab: "42100",
+    other: "43100",
   }
   return map[key] ?? "41100"
 }
@@ -132,7 +132,7 @@ export function getDeferredAccountForFeeType(
 
   const key = feeType.trim().toLowerCase().replace(/\s+/g, "_")
   if (key === "tuition" || key === "registration") {
-    return "21300"
+    return "21310"
   }
 
   return getRevenueAccountForFeeType(feeType)

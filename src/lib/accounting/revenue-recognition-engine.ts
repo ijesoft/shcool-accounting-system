@@ -4,7 +4,7 @@ import { postingEngine } from "@/lib/accounting/posting-engine"
 import { getEntitySettings } from "@/lib/entity-settings"
 import { billingEngine } from "@/lib/accounting/billing-engine"
 
-const UNEARNED_TUITION_CODE = "21300"
+const UNEARNED_TUITION_CODE = "21310"
 const TUITION_REVENUE_CODE = "41100"
 
 interface InvoiceRecognitionCandidate {

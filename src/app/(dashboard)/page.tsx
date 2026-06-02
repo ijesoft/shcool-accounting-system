@@ -72,7 +72,7 @@ export default async function DashboardPage() {
          JOIN "${schema}".journal_entry je ON je.id = jel.journal_entry_id AND je.status = 'posted'
          GROUP BY jel.account_id
        ) SUM_credit ON SUM_credit.account_id = a.id
-       WHERE a.account_code = '21600'`
+       WHERE a.account_code IN ('21610', '21620', '21630', '21510', '21520', '21530')`
     ).catch(() => [{ balance: 0 }]),
   ])
 

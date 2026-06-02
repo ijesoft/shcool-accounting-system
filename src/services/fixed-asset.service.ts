@@ -133,10 +133,10 @@ export const fixedAssetService = {
 
     const accounts = await prisma.$queryRawUnsafe<any[]>(
       `SELECT id, account_code FROM "${entitySchema}".account WHERE account_code IN ($1, $2)`,
-      "51400",
+      "57220",
       asset.asset_category === "building" ? "12130" : "12150"
     )
-    const depExpenseId = accounts.find((a: any) => a.account_code === "51400")?.id
+    const depExpenseId = accounts.find((a: any) => a.account_code === "57220")?.id
     const accumCode = asset.asset_category === "building" ? "12130" : "12150"
     const accumId = accounts.find((a: any) => a.account_code === accumCode)?.id
     if (!depExpenseId || !accumId) throw new Error("Required accounts not found")
@@ -214,15 +214,15 @@ export const fixedAssetService = {
       `SELECT id, account_code FROM "${entitySchema}".account WHERE account_code IN ($1, $2, $3, $4)`,
       asset.asset_category === "building" ? "12120" : "12140",
       asset.asset_category === "building" ? "12130" : "12150",
-      "41500",
-      "51900"
+      "44400",
+      "57400"
     )
     const assetAccountCode = asset.asset_category === "building" ? "12120" : "12140"
     const accumCode = asset.asset_category === "building" ? "12130" : "12150"
     const assetAccountId = accounts.find((a: any) => a.account_code === assetAccountCode)?.id
     const accumId = accounts.find((a: any) => a.account_code === accumCode)?.id
-    const gainId = accounts.find((a: any) => a.account_code === "41500")?.id
-    const lossId = accounts.find((a: any) => a.account_code === "51900")?.id
+    const gainId = accounts.find((a: any) => a.account_code === "44400")?.id
+    const lossId = accounts.find((a: any) => a.account_code === "57400")?.id
     if (!assetAccountId || !accumId) throw new Error("Required asset/accum accounts not found")
 
     const lines: { accountId: string; debit: number; credit: number; lineOrder: number }[] = []

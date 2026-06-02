@@ -6,9 +6,9 @@ import { getBirSettings, isVatRegistered } from "@/lib/entity-settings"
 import { vatEngine } from "@/lib/accounting/vat-engine"
 
 const AR_ACCOUNT_CODE = "11210"
-const UNEARNED_TUITION_CODE = "21300"
+const UNEARNED_TUITION_CODE = "21310"
 const TUITION_REVENUE_CODE = "41100"
-const OUTPUT_VAT_CODE = "21900"
+const OUTPUT_VAT_CODE = "21410"
 
 export interface BillingLine {
   feeType: string
@@ -26,24 +26,24 @@ function getCreditAccountCode(feeType: string, method: RevenueRecognitionMethod)
   if (method === "immediate") {
     const immediateMap: Record<string, string> = {
       tuition: TUITION_REVENUE_CODE,
-      misc: "41200",
-      miscellaneous: "41200",
-      laboratory: "41300",
-      lab: "41300",
-      other: "41400",
+      misc: "42600",
+      miscellaneous: "42600",
+      laboratory: "42100",
+      lab: "42100",
+      other: "43100",
     }
     return immediateMap[key] ?? TUITION_REVENUE_CODE
   }
 
   const deferredMap: Record<string, string> = {
-    tuition: UNEARNED_TUITION_CODE,
-    registration: UNEARNED_TUITION_CODE,
-    misc: "41200",
-    miscellaneous: "41200",
-    laboratory: "41300",
-    lab: "41300",
-    other: "41400",
-  }
+      tuition: UNEARNED_TUITION_CODE,
+      registration: UNEARNED_TUITION_CODE,
+      misc: "42600",
+      miscellaneous: "42600",
+      laboratory: "42100",
+      lab: "42100",
+      other: "43100",
+    }
   return deferredMap[key] ?? UNEARNED_TUITION_CODE
 }
 

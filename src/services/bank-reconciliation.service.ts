@@ -140,7 +140,7 @@ export const bankReconciliationService = {
        JOIN "${entitySchema}".journal_entry je ON je.id = jel.journal_entry_id
        JOIN "${entitySchema}".account a ON a.id = jel.account_id
        WHERE je.status = 'posted'
-         AND a.account_code = '11120'
+          AND a.account_code = '11121'
          AND je.entry_date <= (SELECT statement_date FROM "${entitySchema}".bank_reconciliation WHERE id = $1)` as any,
       reconciliationId
     )
@@ -236,10 +236,10 @@ export const bankReconciliationService = {
     if (adjItems.length > 0) {
       const allCodes = adjItems.flatMap((i: any) => {
         switch (i.type) {
-          case "bank_charge": return ["51800", "11120"]
-          case "interest": return ["11120", "41400"]
-          case "nsf": return ["11200", "11120"]
-          default: return ["51800", "11120"]
+          case "bank_charge": return ["57600", "11121"]
+          case "interest": return ["11121", "44300"]
+          case "nsf": return ["11210", "11121"]
+          default: return ["57600", "11121"]
         }
       })
       const uniqueCodes = Array.from(new Set(allCodes))
@@ -250,8 +250,8 @@ export const bankReconciliationService = {
       )
       const accountMap = new Map(accounts.map((a: any) => [a.account_code, a.id]))
 
-      const cashBankId = accountMap.get("11120")
-      if (!cashBankId) throw new Error("Cash in Bank account (11120) not found")
+      const cashBankId = accountMap.get("11121")
+      if (!cashBankId) throw new Error("Cash in Bank account (11121) not found")
 
       for (const item of adjItems) {
         if (item.journal_entry_id) continue
@@ -260,13 +260,13 @@ export const bankReconciliationService = {
         let creditCode: string
         switch (item.type) {
           case "bank_charge":
-            debitCode = "51800"; creditCode = "11120"; break
+            debitCode = "57600"; creditCode = "11121"; break
           case "interest":
-            debitCode = "11120"; creditCode = "41400"; break
+            debitCode = "11121"; creditCode = "44300"; break
           case "nsf":
-            debitCode = "11200"; creditCode = "11120"; break
+            debitCode = "11210"; creditCode = "11121"; break
           default:
-            debitCode = "51800"; creditCode = "11120"; break
+            debitCode = "57600"; creditCode = "11121"; break
         }
 
         const debitAccountId = accountMap.get(debitCode)
