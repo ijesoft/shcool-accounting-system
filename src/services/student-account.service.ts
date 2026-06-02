@@ -93,8 +93,8 @@ export const studentAccountService = {
       `INSERT INTO "${entitySchema}".student_invoice
        (invoice_number, student_id, term, term_start_date, term_end_date, invoice_date, due_date, total_amount, balance)
        VALUES (
-         (SELECT CONCAT('INV-', LPAD(COALESCE(MAX(CAST(SPLIT_PART(invoice_number, '-', 2) AS INT)), 0) + 1, 6, '0')) FROM "${entitySchema}".student_invoice),
-         $1, $2, $3::date, $4::date, $5::date, $6::date, $7, $7
+         (SELECT CONCAT('INV-', LPAD((COALESCE(MAX(CAST(SPLIT_PART(invoice_number, '-', 2) AS INT)), 0) + 1)::text, 6, '0')) FROM "${entitySchema}".student_invoice),
+         $1::uuid, $2, $3::date, $4::date, $5::date, $6::date, $7, $7
        ) RETURNING *`,
       data.studentId,
       data.term || null,
@@ -107,7 +107,7 @@ export const studentAccountService = {
     const invoice = invRows[0]
     for (const line of data.lines) {
       await prisma.$queryRawUnsafe(
-        `INSERT INTO "${entitySchema}".student_invoice_line (invoice_id, fee_type, amount, discount_type, discount_amount) VALUES ($1, $2, $3, $4, $5)`,
+        `INSERT INTO "${entitySchema}".student_invoice_line (invoice_id, fee_type, amount, discount_type, discount_amount) VALUES ($1::uuid, $2, $3, $4, $5)`,
         invoice.id, line.feeType, line.amount, line.discountType || null, line.discountAmount || 0
       )
     }
@@ -158,6 +158,20 @@ export const studentAccountService = {
        JOIN "${entitySchema}".student_invoice si ON si.student_id = s.id AND si.status IN ('unpaid', 'partial')
        GROUP BY s.id, s.student_number, s.full_name
        ORDER BY total_balance DESC`
+    )
+  },
+
+  async getGlActivity(entitySchema: string, studentId: string) {
+    return prisma.$queryRawUnsafe<any[]>(
+      `SELECT je.id as entry_id, jel.id as line_id, jel.debit, jel.credit, jel.line_description,
+              a.account_code, a.account_name,
+              je.entry_number, je.entry_date, je.status
+       FROM "${entitySchema}".journal_entry_line jel
+       JOIN "${entitySchema}".journal_entry je ON je.id = jel.journal_entry_id
+       JOIN "${entitySchema}".account a ON a.id = jel.account_id
+       WHERE jel.party_type = 'student' AND jel.party_id = $1::uuid
+       ORDER BY je.entry_date DESC, je.created_at DESC`,
+      studentId
     )
   },
 
