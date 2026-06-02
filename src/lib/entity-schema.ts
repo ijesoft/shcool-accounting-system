@@ -466,72 +466,475 @@ export async function createEntitySchema(schemaName: string): Promise<void> {
     );
 
     INSERT INTO "${schemaName}".account (account_code, account_name, account_type, normal_balance, level) VALUES
+      -- ===================== ASSETS =====================
       ('10000', 'ASSETS', 'asset', 'debit', 0),
+
+      -- Current Assets
       ('11000', 'Current Assets', 'asset', 'debit', 1),
+
+      -- Cash and Cash Equivalents
       ('11100', 'Cash and Cash Equivalents', 'asset', 'debit', 2),
-      ('11110', 'Cash on Hand', 'asset', 'debit', 3),
+      ('11110', 'Cash on Hand - Main Office', 'asset', 'debit', 3),
+      ('11111', 'Cash on Hand - Bursar', 'asset', 'debit', 4),
+      ('11112', 'Cash on Hand - Treasurer', 'asset', 'debit', 4),
+      ('11113', 'Petty Cash - Administration', 'asset', 'debit', 4),
+      ('11114', 'Petty Cash - Academics', 'asset', 'debit', 4),
+      ('11115', 'Petty Cash - Student Affairs', 'asset', 'debit', 4),
       ('11120', 'Cash in Bank', 'asset', 'debit', 3),
+      ('11121', 'BDO - Operating Account', 'asset', 'debit', 4),
+      ('11122', 'BPI - Payroll Account', 'asset', 'debit', 4),
+      ('11123', 'Landbank - Government Grants', 'asset', 'debit', 4),
+      ('11124', 'UnionBank - Tuition Collection', 'asset', 'debit', 4),
+      ('11125', 'BDO - Payroll Account', 'asset', 'debit', 4),
+      ('11130', 'Time Deposits', 'asset', 'debit', 3),
+      ('11140', 'Cash Advances - Employees', 'asset', 'debit', 3),
+
+      -- Accounts Receivable
       ('11200', 'Accounts Receivable', 'asset', 'debit', 2),
-      ('11210', 'Accounts Receivable - Students', 'asset', 'debit', 3),
-      ('11300', 'Allowance for Doubtful Accounts', 'contra_asset', 'credit', 3),
-      ('11400', 'Prepaid Expenses', 'asset', 'debit', 3),
-      ('11500', 'Inventories / Supplies', 'asset', 'debit', 3),
-      ('11600', 'Input VAT', 'asset', 'debit', 3),
+      ('11210', 'Accounts Receivable - Tuition', 'asset', 'debit', 3),
+      ('11211', 'Tuition Receivable - Regular', 'asset', 'debit', 4),
+      ('11212', 'Tuition Receivable - Extension', 'asset', 'debit', 4),
+      ('11213', 'Tuition Receivable - Summer', 'asset', 'debit', 4),
+      ('11214', 'Tuition Receivable - Online', 'asset', 'debit', 4),
+      ('11220', 'Accounts Receivable - Fees', 'asset', 'debit', 3),
+      ('11230', 'Accounts Receivable - Government', 'asset', 'debit', 3),
+      ('11231', 'DOST-SEI Receivable', 'asset', 'debit', 4),
+      ('11232', 'CHED Grants Receivable', 'asset', 'debit', 4),
+      ('11233', 'TESDA Receivable', 'asset', 'debit', 4),
+      ('11240', 'Accounts Receivable - Donations', 'asset', 'debit', 3),
+      ('11250', 'Accounts Receivable - Other', 'asset', 'debit', 3),
+      ('11260', 'SSS/PhilHealth/Pag-IBIG Receivable', 'asset', 'debit', 3),
+      ('11270', 'Withholding Tax Receivable', 'asset', 'debit', 3),
+      ('11300', 'Allowance for Doubtful Accounts', 'contra_asset', 'credit', 2),
+
+      -- Short-term Investments
+      ('11400', 'Short-term Investments', 'asset', 'debit', 2),
+      ('11410', 'Treasury Bills', 'asset', 'debit', 3),
+      ('11420', 'Money Market Funds', 'asset', 'debit', 3),
+
+      -- Inventories
+      ('11500', 'Inventories', 'asset', 'debit', 2),
+      ('11510', 'Supplies Inventory', 'asset', 'debit', 3),
+      ('11511', 'Office Supplies', 'asset', 'debit', 4),
+      ('11512', 'Laboratory Supplies', 'asset', 'debit', 4),
+      ('11513', 'Bookstore Inventory', 'asset', 'debit', 4),
+      ('11520', 'Fuel and Lubricants', 'asset', 'debit', 3),
+      ('11530', 'Canteen Inventory', 'asset', 'debit', 3),
+
+      -- Prepayments
+      ('11600', 'Prepaid Expenses', 'asset', 'debit', 2),
+      ('11610', 'Prepaid Insurance', 'asset', 'debit', 3),
+      ('11620', 'Prepaid Rent', 'asset', 'debit', 3),
+      ('11630', 'Prepaid Subscriptions', 'asset', 'debit', 3),
+
+      -- Tax Assets
+      ('11700', 'Tax Assets', 'asset', 'debit', 2),
+      ('11710', 'Input VAT', 'asset', 'debit', 3),
+      ('11720', 'Creditable Withholding Tax - Expanded', 'asset', 'debit', 3),
+      ('11730', 'Creditable Withholding Tax - Final', 'asset', 'debit', 3),
+
+      -- Non-Current Assets
       ('12000', 'Non-Current Assets', 'asset', 'debit', 1),
+
+      -- Property, Plant, and Equipment
       ('12100', 'Property, Plant, and Equipment', 'asset', 'debit', 2),
       ('12110', 'Land', 'asset', 'debit', 3),
+      ('12111', 'Land - Main Campus', 'asset', 'debit', 4),
+      ('12112', 'Land - Extension Campus', 'asset', 'debit', 4),
+      ('12113', 'Land - Dormitory Site', 'asset', 'debit', 4),
       ('12120', 'Buildings', 'asset', 'debit', 3),
+      ('12121', 'Main Building', 'asset', 'debit', 4),
+      ('12122', 'Science Building', 'asset', 'debit', 4),
+      ('12123', 'Library Building', 'asset', 'debit', 4),
+      ('12124', 'Student Center', 'asset', 'debit', 4),
+      ('12125', 'Dormitory', 'asset', 'debit', 4),
+      ('12126', 'Canteen Building', 'asset', 'debit', 4),
+      ('12127', 'Clinic', 'asset', 'debit', 4),
       ('12130', 'Accumulated Depreciation - Buildings', 'contra_asset', 'credit', 3),
-      ('12140', 'Office Equipment', 'asset', 'debit', 3),
+      ('12140', 'Equipment', 'asset', 'debit', 3),
+      ('12141', 'Computer Equipment', 'asset', 'debit', 4),
+      ('12142', 'Laboratory Equipment', 'asset', 'debit', 4),
+      ('12143', 'Audio-Visual Equipment', 'asset', 'debit', 4),
+      ('12144', 'Office Furniture and Fixtures', 'asset', 'debit', 4),
+      ('12145', 'Kitchen Equipment', 'asset', 'debit', 4),
       ('12150', 'Accumulated Depreciation - Equipment', 'contra_asset', 'credit', 3),
       ('12160', 'Vehicles', 'asset', 'debit', 3),
+      ('12161', 'School Bus', 'asset', 'debit', 4),
+      ('12162', 'Service Vehicles', 'asset', 'debit', 4),
       ('12170', 'Accumulated Depreciation - Vehicles', 'contra_asset', 'credit', 3),
-      ('12180', 'Library Books & Collections', 'asset', 'debit', 3),
+      ('12180', 'Construction in Progress', 'asset', 'debit', 3),
+
+      -- Intangible Assets
+      ('12200', 'Intangible Assets', 'asset', 'debit', 2),
+      ('12210', 'Software Licenses', 'asset', 'debit', 3),
+      ('12220', 'Patents and Trademarks', 'asset', 'debit', 3),
+      ('12230', 'Accumulated Amortization', 'contra_asset', 'credit', 3),
+
+      -- Deferred Charges
+      ('12300', 'Deferred Charges', 'asset', 'debit', 2),
+      ('12310', 'Organizational Costs', 'asset', 'debit', 3),
+      ('12320', 'Deferred Financing Costs', 'asset', 'debit', 3),
+
+      -- ===================== LIABILITIES =====================
       ('20000', 'LIABILITIES', 'liability', 'credit', 0),
+
+      -- Current Liabilities
       ('21000', 'Current Liabilities', 'liability', 'credit', 1),
+
+      -- Trade Payables
       ('21100', 'Accounts Payable', 'liability', 'credit', 2),
       ('21110', 'Accounts Payable - Trade', 'liability', 'credit', 3),
-      ('21200', 'Accrued Expenses', 'liability', 'credit', 3),
-      ('21300', 'Unearned Tuition', 'liability', 'credit', 3),
-      ('21400', 'VAT Payable', 'liability', 'credit', 3),
-      ('21500', 'Withholding Tax Payable', 'liability', 'credit', 3),
-      ('21600', 'SSS/PhilHealth/Pag-IBIG Payable', 'liability', 'credit', 3),
-      ('21700', '13th Month Pay Payable', 'liability', 'credit', 3),
-      ('21800', 'Deferred Revenue - Enrollment Deposits', 'liability', 'credit', 3),
-      ('21900', 'Output VAT', 'liability', 'credit', 3),
+      ('21120', 'Accounts Payable - Utilities', 'liability', 'credit', 3),
+      ('21130', 'Accounts Payable - Canteen Supplies', 'liability', 'credit', 3),
+      ('21140', 'Accounts Payable - Bookstore', 'liability', 'credit', 3),
+
+      -- Accrued Liabilities
+      ('21200', 'Accrued Liabilities', 'liability', 'credit', 2),
+      ('21210', 'Accrued Salaries and Wages', 'liability', 'credit', 3),
+      ('21220', 'Accrued Expenses', 'liability', 'credit', 3),
+      ('21230', 'Accrued Interest', 'liability', 'credit', 3),
+
+      -- Unearned Revenue
+      ('21300', 'Unearned Revenue', 'liability', 'credit', 2),
+      ('21310', 'Unearned Tuition', 'liability', 'credit', 3),
+      ('21320', 'Enrollment Deposits', 'liability', 'credit', 3),
+      ('21330', 'Deferred Revenue - Grants', 'liability', 'credit', 3),
+
+      -- Tax Payables
+      ('21400', 'Tax Payables', 'liability', 'credit', 2),
+      ('21410', 'Output VAT', 'liability', 'credit', 3),
+      ('21420', 'VAT Payable', 'liability', 'credit', 3),
+      ('21430', 'Expanded Withholding Tax Payable', 'liability', 'credit', 3),
+      ('21440', 'Final Withholding Tax Payable', 'liability', 'credit', 3),
+      ('21450', 'Percentage Tax Payable', 'liability', 'credit', 3),
+
+      -- Statutory Payables
+      ('21500', 'Statutory Payables', 'liability', 'credit', 2),
+      ('21510', 'SSS Contributions Payable', 'liability', 'credit', 3),
+      ('21520', 'PhilHealth Contributions Payable', 'liability', 'credit', 3),
+      ('21530', 'Pag-IBIG Contributions Payable', 'liability', 'credit', 3),
+
+      -- Compensation Payables
+      ('21600', 'Compensation Payables', 'liability', 'credit', 2),
+      ('21610', '13th Month Pay Payable', 'liability', 'credit', 3),
+      ('21620', 'Leave Indemnity Payable', 'liability', 'credit', 3),
+      ('21630', 'Service Incentive Leave Payable', 'liability', 'credit', 3),
+
+      -- Government Payables
+      ('21700', 'Government Payables', 'liability', 'credit', 2),
+      ('21710', 'DOST-SEI Payable', 'liability', 'credit', 3),
+      ('21720', 'TESDA Payable', 'liability', 'credit', 3),
+      ('21730', 'CHED Payable', 'liability', 'credit', 3),
+
+      -- Non-Current Liabilities
       ('22000', 'Non-Current Liabilities', 'liability', 'credit', 1),
-      ('22100', 'Loans Payable', 'liability', 'credit', 3),
+      ('22100', 'Loans Payable', 'liability', 'credit', 2),
+      ('22110', 'Bank Loans Payable', 'liability', 'credit', 3),
+      ('22120', 'Pag-IBIG Housing Loan Payable', 'liability', 'credit', 3),
+      ('22130', 'Equipment Financing Payable', 'liability', 'credit', 3),
+      ('22200', 'Bonds Payable', 'liability', 'credit', 2),
+      ('22300', 'Deferred Tax Liabilities', 'liability', 'credit', 2),
+
+      -- ===================== EQUITY =====================
       ('30000', 'EQUITY', 'equity', 'credit', 0),
-      ('31100', 'Capital', 'equity', 'credit', 3),
-      ('31200', 'Retained Earnings', 'equity', 'credit', 3),
-      ('31300', 'Fund Balance', 'equity', 'credit', 3),
-      ('39000', 'Income Summary', 'equity', 'credit', 3),
+      ('31000', 'Contributed Equity', 'equity', 'credit', 1),
+      ('31100', 'Capital', 'equity', 'credit', 2),
+      ('31110', 'Founder Capital', 'equity', 'credit', 3),
+      ('31120', 'Share Capital', 'equity', 'credit', 3),
+      ('31200', 'Additional Paid-in Capital', 'equity', 'credit', 2),
+      ('32000', 'Accumulated Earnings', 'equity', 'credit', 1),
+      ('32100', 'Retained Earnings', 'equity', 'credit', 2),
+      ('33000', 'Fund Balance', 'equity', 'credit', 1),
+      ('33010', 'Fund Balance - Unrestricted', 'equity', 'credit', 2),
+      ('33020', 'Fund Balance - Temporarily Restricted', 'equity', 'credit', 2),
+      ('33030', 'Fund Balance - Permanently Restricted', 'equity', 'credit', 2),
+      ('31300', 'Fund Balance', 'equity', 'credit', 2),
+      ('34000', 'Board Designated Fund Balance', 'equity', 'credit', 1),
+      ('39000', 'Income Summary', 'equity', 'credit', 1),
+
+      -- ===================== REVENUE =====================
       ('40000', 'REVENUE', 'revenue', 'credit', 0),
-      ('41100', 'Tuition Revenue', 'revenue', 'credit', 3),
-      ('41200', 'Miscellaneous Fees', 'revenue', 'credit', 3),
-      ('41300', 'Laboratory Fees', 'revenue', 'credit', 3),
-      ('41400', 'Other Income', 'revenue', 'credit', 3),
-      ('41500', 'Gain on Asset Disposal', 'revenue', 'credit', 3),
-      ('41600', 'Government Grants & Subsidies', 'revenue', 'credit', 3),
-      ('41700', 'Donation Revenue', 'revenue', 'credit', 3),
-      ('41800', 'Rental Income', 'revenue', 'credit', 3),
+
+      -- Operating Revenue - Tuition
+      ('41000', 'Tuition Revenue', 'revenue', 'credit', 1),
+      ('41100', 'Tuition Revenue - Regular', 'revenue', 'credit', 2),
+      ('41110', 'Tuition - College', 'revenue', 'credit', 3),
+      ('41120', 'Tuition - Senior High School', 'revenue', 'credit', 3),
+      ('41130', 'Tuition - Junior High School', 'revenue', 'credit', 3),
+      ('41200', 'Tuition Revenue - Extension', 'revenue', 'credit', 2),
+      ('41300', 'Tuition Revenue - Summer', 'revenue', 'credit', 2),
+      ('41400', 'Tuition Revenue - Online', 'revenue', 'credit', 2),
+
+      -- Operating Revenue - Fees
+      ('42000', 'Fee Revenue', 'revenue', 'credit', 1),
+      ('42100', 'Laboratory Fees', 'revenue', 'credit', 2),
+      ('42200', 'Library Fees', 'revenue', 'credit', 2),
+      ('42300', 'Registration Fees', 'revenue', 'credit', 2),
+      ('42400', 'Examination Fees', 'revenue', 'credit', 2),
+      ('42500', 'Graduation Fees', 'revenue', 'credit', 2),
+      ('42600', 'Miscellaneous Fees', 'revenue', 'credit', 2),
+
+      -- Operating Revenue - Other
+      ('43000', 'Other Operating Revenue', 'revenue', 'credit', 1),
+      ('43100', 'Canteen Revenue', 'revenue', 'credit', 2),
+      ('43200', 'Parking Revenue', 'revenue', 'credit', 2),
+      ('43300', 'Rental Income', 'revenue', 'credit', 2),
+      ('43400', 'Alumni Dues and Donations', 'revenue', 'credit', 2),
+      ('43500', 'Endowment Income', 'revenue', 'credit', 2),
+      ('43600', 'Bookstore Sales', 'revenue', 'credit', 2),
+      ('43700', 'Training and Seminars', 'revenue', 'credit', 2),
+
+      -- Non-Operating Revenue
+      ('44000', 'Non-Operating Revenue', 'revenue', 'credit', 1),
+      ('44100', 'Government Grants', 'revenue', 'credit', 2),
+      ('44110', 'DOST-SEI Grants', 'revenue', 'credit', 3),
+      ('44120', 'CHED Grants', 'revenue', 'credit', 3),
+      ('44130', 'TESDA Grants', 'revenue', 'credit', 3),
+      ('44140', 'DA-BAR Grants', 'revenue', 'credit', 3),
+      ('44200', 'Donation Revenue', 'revenue', 'credit', 2),
+      ('44210', 'Cash Donations', 'revenue', 'credit', 3),
+      ('44220', 'In-Kind Donations', 'revenue', 'credit', 3),
+      ('44300', 'Interest Income', 'revenue', 'credit', 2),
+      ('44400', 'Gain on Asset Disposal', 'revenue', 'credit', 2),
+      ('44500', 'Gain on Foreign Exchange', 'revenue', 'credit', 2),
+
+      -- ===================== EXPENSES =====================
       ('50000', 'EXPENSES', 'expense', 'debit', 0),
-      ('51100', 'Salaries and Wages', 'expense', 'debit', 3),
-      ('51200', 'Utilities Expense', 'expense', 'debit', 3),
-      ('51300', 'Rent Expense', 'expense', 'debit', 3),
-      ('51400', 'Depreciation Expense', 'expense', 'debit', 3),
-      ('51500', 'Supplies Expense', 'expense', 'debit', 3),
-      ('51600', 'Professional Fees', 'expense', 'debit', 3),
-      ('51700', 'Taxes and Licenses', 'expense', 'debit', 3),
-      ('51800', 'Miscellaneous Expense', 'expense', 'debit', 3),
-      ('51900', 'Loss on Asset Disposal', 'expense', 'debit', 3),
-      ('52000', 'SSS/PhilHealth/Pag-IBIG Contributions', 'expense', 'debit', 3),
-      ('52100', '13th Month Pay Expense', 'expense', 'debit', 3),
-      ('52200', 'Insurance Expense', 'expense', 'debit', 3),
-      ('52300', 'Repairs & Maintenance', 'expense', 'debit', 3),
-      ('52400', 'Interest Expense', 'expense', 'debit', 3),
-      ('52500', 'Training & Development', 'expense', 'debit', 3)
+
+      -- ===== INSTRUCTION =====
+      ('51000', 'Instruction', 'expense', 'debit', 1),
+
+      -- Instruction - Personnel Services
+      ('51100', 'Instruction - Personnel Services', 'expense', 'debit', 2),
+      ('51110', 'Basic Salaries - Instruction', 'expense', 'debit', 3),
+      ('51120', 'Allowances - Instruction', 'expense', 'debit', 3),
+      ('51130', 'Overtime Pay - Instruction', 'expense', 'debit', 3),
+      ('51140', 'SSS Employer - Instruction', 'expense', 'debit', 3),
+      ('51150', 'PhilHealth Employer - Instruction', 'expense', 'debit', 3),
+      ('51160', 'Pag-IBIG Employer - Instruction', 'expense', 'debit', 3),
+      ('51170', '13th Month Pay - Instruction', 'expense', 'debit', 3),
+
+      -- Instruction - MOOE
+      ('51200', 'Instruction - MOOE', 'expense', 'debit', 2),
+      ('51210', 'Office Supplies - Instruction', 'expense', 'debit', 3),
+      ('51220', 'Laboratory Supplies - Instruction', 'expense', 'debit', 3),
+      ('51230', 'Utilities - Instruction', 'expense', 'debit', 3),
+      ('51240', 'Internet and Communications - Instruction', 'expense', 'debit', 3),
+      ('51250', 'Maintenance and Repairs - Instruction', 'expense', 'debit', 3),
+      ('51260', 'Software Subscriptions - Instruction', 'expense', 'debit', 3),
+
+      -- Instruction - Travel
+      ('51300', 'Instruction - Travel', 'expense', 'debit', 2),
+      ('51310', 'Local Travel - Instruction', 'expense', 'debit', 3),
+      ('51320', 'Foreign Travel - Instruction', 'expense', 'debit', 3),
+
+      -- Instruction - Capital Outlay
+      ('51400', 'Instruction - Capital Outlay', 'expense', 'debit', 2),
+      ('51410', 'Equipment Purchase - Instruction', 'expense', 'debit', 3),
+      ('51420', 'Furniture Purchase - Instruction', 'expense', 'debit', 3),
+
+      -- ===== RESEARCH AND DEVELOPMENT =====
+      ('52000', 'Research and Development', 'expense', 'debit', 1),
+
+      -- R&D - Personnel Services
+      ('52100', 'R&D - Personnel Services', 'expense', 'debit', 2),
+      ('52110', 'Basic Salaries - R&D', 'expense', 'debit', 3),
+      ('52120', 'Research Grants to Faculty', 'expense', 'debit', 3),
+      ('52130', 'SSS Employer - R&D', 'expense', 'debit', 3),
+      ('52140', 'PhilHealth Employer - R&D', 'expense', 'debit', 3),
+      ('52150', 'Pag-IBIG Employer - R&D', 'expense', 'debit', 3),
+
+      -- R&D - MOOE
+      ('52200', 'R&D - MOOE', 'expense', 'debit', 2),
+      ('52210', 'Research Materials', 'expense', 'debit', 3),
+      ('52220', 'Publication Costs', 'expense', 'debit', 3),
+      ('52230', 'Conference and Forum Costs', 'expense', 'debit', 3),
+      ('52240', 'Laboratory Consumables', 'expense', 'debit', 3),
+
+      -- ===== EXTENSION AND PUBLIC SERVICE =====
+      ('53000', 'Extension and Public Service', 'expense', 'debit', 1),
+
+      -- EPS - Personnel Services
+      ('53100', 'EPS - Personnel Services', 'expense', 'debit', 2),
+      ('53110', 'Basic Salaries - EPS', 'expense', 'debit', 3),
+      ('53120', 'SSS Employer - EPS', 'expense', 'debit', 3),
+      ('53130', 'PhilHealth Employer - EPS', 'expense', 'debit', 3),
+      ('53140', 'Pag-IBIG Employer - EPS', 'expense', 'debit', 3),
+
+      -- EPS - MOOE
+      ('53200', 'EPS - MOOE', 'expense', 'debit', 2),
+      ('53210', 'Community Outreach Programs', 'expense', 'debit', 3),
+      ('53220', 'Extension Program Materials', 'expense', 'debit', 3),
+      ('53230', 'Training and Seminars', 'expense', 'debit', 3),
+
+      -- ===== STUDENT SERVICES =====
+      ('54000', 'Student Services', 'expense', 'debit', 1),
+
+      -- Student Services - Personnel
+      ('54100', 'Student Services - Personnel', 'expense', 'debit', 2),
+      ('54110', 'Basic Salaries - Student Services', 'expense', 'debit', 3),
+      ('54120', 'SSS Employer - Student Services', 'expense', 'debit', 3),
+      ('54130', 'PhilHealth Employer - Student Services', 'expense', 'debit', 3),
+      ('54140', 'Pag-IBIG Employer - Student Services', 'expense', 'debit', 3),
+
+      -- Student Services - MOOE
+      ('54200', 'Student Services - MOOE', 'expense', 'debit', 2),
+      ('54210', 'Scholarships and Financial Aid', 'expense', 'debit', 3),
+      ('54220', 'Student Organization Funds', 'expense', 'debit', 3),
+      ('54230', 'Counseling Services', 'expense', 'debit', 3),
+      ('54240', 'Admission and Placement', 'expense', 'debit', 3),
+      ('54250', 'Health and Wellness', 'expense', 'debit', 3),
+      ('54260', 'Sports and Athletics', 'expense', 'debit', 3),
+
+      -- ===== ADMINISTRATION AND FINANCE =====
+      ('55000', 'Administration and Finance', 'expense', 'debit', 1),
+
+      -- Admin - Personnel Services
+      ('55100', 'Admin - Personnel Services', 'expense', 'debit', 2),
+      ('55110', 'Basic Salaries - Administration', 'expense', 'debit', 3),
+      ('55120', 'Allowances - Administration', 'expense', 'debit', 3),
+      ('55130', 'Overtime Pay - Administration', 'expense', 'debit', 3),
+      ('55140', 'SSS Employer - Admin', 'expense', 'debit', 3),
+      ('55150', 'PhilHealth Employer - Admin', 'expense', 'debit', 3),
+      ('55160', 'Pag-IBIG Employer - Admin', 'expense', 'debit', 3),
+      ('55170', '13th Month Pay - Admin', 'expense', 'debit', 3),
+
+      -- Admin - MOOE
+      ('55200', 'Admin - MOOE', 'expense', 'debit', 2),
+      ('55210', 'Office Supplies - Administration', 'expense', 'debit', 3),
+      ('55220', 'Utilities - Administration', 'expense', 'debit', 3),
+      ('55230', 'Internet and Communications - Admin', 'expense', 'debit', 3),
+      ('55240', 'Professional Fees - Admin', 'expense', 'debit', 3),
+      ('55250', 'Bank Charges', 'expense', 'debit', 3),
+      ('55260', 'Insurance - Administration', 'expense', 'debit', 3),
+      ('55270', 'Taxes and Licenses', 'expense', 'debit', 3),
+      ('55280', 'Audit and Legal Fees', 'expense', 'debit', 3),
+      ('55290', 'Printing and Reproduction', 'expense', 'debit', 3),
+
+      -- Admin - Travel
+      ('55300', 'Admin - Travel', 'expense', 'debit', 2),
+      ('55310', 'Local Travel - Administration', 'expense', 'debit', 3),
+      ('55320', 'Foreign Travel - Administration', 'expense', 'debit', 3),
+
+      -- ===== PLANT AND EQUIPMENT OPERATIONS =====
+      ('56000', 'Plant and Equipment Operations', 'expense', 'debit', 1),
+
+      -- PEO - Personnel Services
+      ('56100', 'PEO - Personnel Services', 'expense', 'debit', 2),
+      ('56110', 'Basic Salaries - PEO', 'expense', 'debit', 3),
+      ('56120', 'SSS Employer - PEO', 'expense', 'debit', 3),
+      ('56130', 'PhilHealth Employer - PEO', 'expense', 'debit', 3),
+      ('56140', 'Pag-IBIG Employer - PEO', 'expense', 'debit', 3),
+
+      -- PEO - MOOE
+      ('56200', 'PEO - MOOE', 'expense', 'debit', 2),
+      ('56210', 'Building Maintenance', 'expense', 'debit', 3),
+      ('56220', 'Grounds Maintenance', 'expense', 'debit', 3),
+      ('56230', 'Utilities - Plant Operations', 'expense', 'debit', 3),
+      ('56240', 'Security Services', 'expense', 'debit', 3),
+      ('56250', 'Janitorial Services', 'expense', 'debit', 3),
+      ('56260', 'Vehicle Maintenance', 'expense', 'debit', 3),
+
+      -- PEO - Capital Outlay
+      ('56300', 'PEO - Capital Outlay', 'expense', 'debit', 2),
+      ('56310', 'Building Construction', 'expense', 'debit', 3),
+      ('56320', 'Building Renovation', 'expense', 'debit', 3),
+      ('56330', 'Land Acquisition', 'expense', 'debit', 3),
+      ('56340', 'Vehicle Purchase', 'expense', 'debit', 3),
+
+      -- ===== NON-OPERATING EXPENSES =====
+      ('57000', 'Non-Operating Expenses', 'expense', 'debit', 1),
+      ('57100', 'Interest Expense', 'expense', 'debit', 2),
+      ('57110', 'Interest on Bank Loans', 'expense', 'debit', 3),
+      ('57120', 'Interest on Equipment Financing', 'expense', 'debit', 3),
+      ('57130', 'Interest on Pag-IBIG Loan', 'expense', 'debit', 3),
+      ('57200', 'Depreciation Expense', 'expense', 'debit', 2),
+      ('57210', 'Depreciation - Buildings', 'expense', 'debit', 3),
+      ('57220', 'Depreciation - Equipment', 'expense', 'debit', 3),
+      ('57230', 'Depreciation - Vehicles', 'expense', 'debit', 3),
+      ('57300', 'Amortization Expense', 'expense', 'debit', 2),
+      ('57400', 'Loss on Asset Disposal', 'expense', 'debit', 2),
+      ('57500', 'Loss on Foreign Exchange', 'expense', 'debit', 2),
+      ('57600', 'Miscellaneous Expense', 'expense', 'debit', 2),
+      ('57700', 'Bad Debt Expense', 'expense', 'debit', 2)
     ON CONFLICT (account_code) DO NOTHING;
+
+    -- Set parent-child relationships
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '10000') WHERE account_code IN ('11000', '12000');
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '11000') WHERE account_code IN ('11100', '11200', '11300', '11400', '11500', '11600', '11700');
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '11100') WHERE account_code IN ('11110', '11120', '11130', '11140');
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '11110') WHERE account_code LIKE '1111[1-5]';
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '11120') WHERE account_code LIKE '1112[1-5]';
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '11200') WHERE account_code IN ('11210', '11220', '11230', '11240', '11250', '11260', '11270');
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '11210') WHERE account_code LIKE '1121[1-4]';
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '11230') WHERE account_code IN ('11231', '11232', '11233');
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '11400') WHERE account_code IN ('11410', '11420');
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '11500') WHERE account_code IN ('11510', '11520', '11530');
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '11510') WHERE account_code IN ('11511', '11512', '11513');
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '11600') WHERE account_code IN ('11610', '11620', '11630');
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '11700') WHERE account_code IN ('11710', '11720', '11730');
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '12000') WHERE account_code IN ('12100', '12200', '12300');
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '12100') WHERE account_code IN ('12110', '12120', '12130', '12140', '12150', '12160', '12170', '12180');
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '12110') WHERE account_code IN ('12111', '12112', '12113');
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '12120') WHERE account_code IN ('12121', '12122', '12123', '12124', '12125', '12126', '12127');
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '12140') WHERE account_code IN ('12141', '12142', '12143', '12144', '12145');
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '12160') WHERE account_code IN ('12161', '12162');
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '12200') WHERE account_code IN ('12210', '12220', '12230');
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '12300') WHERE account_code IN ('12310', '12320');
+
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '20000') WHERE account_code IN ('21000', '22000');
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '21000') WHERE account_code IN ('21100', '21200', '21300', '21400', '21500', '21600', '21700');
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '21100') WHERE account_code IN ('21110', '21120', '21130', '21140');
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '21200') WHERE account_code IN ('21210', '21220', '21230');
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '21300') WHERE account_code IN ('21310', '21320', '21330');
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '21400') WHERE account_code IN ('21410', '21420', '21430', '21440', '21450');
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '21500') WHERE account_code IN ('21510', '21520', '21530');
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '21600') WHERE account_code IN ('21610', '21620', '21630');
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '21700') WHERE account_code IN ('21710', '21720', '21730');
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '22000') WHERE account_code IN ('22100', '22200', '22300');
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '22100') WHERE account_code IN ('22110', '22120', '22130');
+
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '30000') WHERE account_code IN ('31000', '32000', '33000', '34000', '39000');
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '31000') WHERE account_code IN ('31100', '31200');
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '31100') WHERE account_code IN ('31110', '31120');
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '32000') WHERE account_code IN ('32100');
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '33000') WHERE account_code IN ('33010', '33020', '33030', '31300');
+
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '40000') WHERE account_code IN ('41000', '42000', '43000', '44000');
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '41000') WHERE account_code IN ('41100', '41200', '41300', '41400');
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '41100') WHERE account_code IN ('41110', '41120', '41130');
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '42000') WHERE account_code IN ('42100', '42200', '42300', '42400', '42500', '42600');
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '43000') WHERE account_code IN ('43100', '43200', '43300', '43400', '43500', '43600', '43700');
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '44000') WHERE account_code IN ('44100', '44200', '44300', '44400', '44500');
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '44100') WHERE account_code IN ('44110', '44120', '44130', '44140');
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '44200') WHERE account_code IN ('44210', '44220');
+
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '50000') WHERE account_code IN ('51000', '52000', '53000', '54000', '55000', '56000', '57000');
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '51000') WHERE account_code IN ('51100', '51200', '51300', '51400');
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '51100') WHERE account_code LIKE '511[1-7]';
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '51200') WHERE account_code LIKE '512[1-6]';
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '51300') WHERE account_code IN ('51310', '51320');
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '51400') WHERE account_code IN ('51410', '51420');
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '52000') WHERE account_code IN ('52100', '52200');
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '52100') WHERE account_code LIKE '521[1-5]';
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '52200') WHERE account_code LIKE '522[1-4]';
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '53000') WHERE account_code IN ('53100', '53200');
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '53100') WHERE account_code LIKE '531[1-4]';
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '53200') WHERE account_code LIKE '532[1-3]';
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '54000') WHERE account_code IN ('54100', '54200');
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '54100') WHERE account_code LIKE '541[1-4]';
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '54200') WHERE account_code LIKE '542[1-6]';
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '55000') WHERE account_code IN ('55100', '55200', '55300');
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '55100') WHERE account_code LIKE '551[1-7]';
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '55200') WHERE account_code LIKE '552[1-9]';
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '55300') WHERE account_code IN ('55310', '55320');
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '56000') WHERE account_code IN ('56100', '56200', '56300');
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '56100') WHERE account_code LIKE '561[1-4]';
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '56200') WHERE account_code LIKE '562[1-6]';
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '56300') WHERE account_code IN ('56310', '56320', '56330', '56340');
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '57000') WHERE account_code IN ('57100', '57200', '57300', '57400', '57500', '57600', '57700');
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '57100') WHERE account_code IN ('57110', '57120', '57130');
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '57200') WHERE account_code IN ('57210', '57220', '57230');
 
     INSERT INTO "${schemaName}".number_series (series_type, prefix, starting_number, next_number)
     SELECT v.series_type, v.prefix, v.starting_number, v.next_number

@@ -13,7 +13,7 @@ export const createAccountSchema = z.object({
   accountType: z.enum(accountTypes),
   normalBalance: z.enum(normalBalances),
   parentId: z.string().uuid().optional(),
-  level: z.number().int().min(0).max(3).default(3),
+  level: z.number().int().min(0).max(5).default(3),
   description: z.string().optional(),
 })
 

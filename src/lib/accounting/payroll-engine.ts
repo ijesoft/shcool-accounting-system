@@ -384,14 +384,14 @@ export const payrollEngine = {
     thirteenthMonthPayable: string
   }> {
     const accountCodes = {
-      salaryExpense: "51100",
-      contributionExpense: "52000",
-      cash: "11120",
-      sssPayable: "21600",
-      philhealthPayable: "21600",
-      pagibigPayable: "21600",
-      whtPayable: "21500",
-      thirteenthMonthPayable: "21700",
+      salaryExpense: "51110",
+      contributionExpense: "55270",
+      cash: "11121",
+      sssPayable: "21510",
+      philhealthPayable: "21520",
+      pagibigPayable: "21530",
+      whtPayable: "21430",
+      thirteenthMonthPayable: "21610",
     }
 
     const map: any = {}

@@ -16,25 +16,25 @@ export interface ActivityLine {
 }
 
 const RECEIPT_CATEGORIES: ActivityCategory[] = [
-  { category: "Tuition and Fees", accountCodes: ["41100", "41200", "41300", "41400"], type: "receipt" },
-  { category: "Donations and Grants", accountCodes: ["41600", "41700"], type: "receipt" },
-  { category: "Rental Income", accountCodes: ["41800"], type: "receipt" },
-  { category: "Other Income", accountCodes: ["41500"], type: "receipt" },
+ { category: "Tuition and Fees", accountCodes: ["41100", "41110", "41120", "41130", "41200", "41300", "41400", "42100", "42200", "42300", "42400", "42500", "42600"], type: "receipt" },
+   { category: "Donations and Grants", accountCodes: ["44100", "44110", "44120", "44130", "44140", "44200", "44210", "44220"], type: "receipt" },
+   { category: "Rental Income", accountCodes: ["43300"], type: "receipt" },
+   { category: "Other Income", accountCodes: ["43100", "43200", "43400", "43500", "43600", "43700", "44300", "44400", "44500"], type: "receipt" },
 ]
 
 const DISBURSEMENT_CATEGORIES: ActivityCategory[] = [
-  { category: "Personnel Services", accountCodes: ["51100", "52000", "52100"], type: "disbursement" },
-  { category: "Utilities", accountCodes: ["51200"], type: "disbursement" },
-  { category: "Rent", accountCodes: ["51300"], type: "disbursement" },
-  { category: "Depreciation", accountCodes: ["51400"], type: "disbursement" },
-  { category: "Supplies", accountCodes: ["51500"], type: "disbursement" },
-  { category: "Professional Fees", accountCodes: ["51600"], type: "disbursement" },
-  { category: "Taxes and Licenses", accountCodes: ["51700"], type: "disbursement" },
-  { category: "Miscellaneous", accountCodes: ["51800", "51900"], type: "disbursement" },
-  { category: "Insurance", accountCodes: ["52200"], type: "disbursement" },
-  { category: "Repairs and Maintenance", accountCodes: ["52300"], type: "disbursement" },
-  { category: "Interest", accountCodes: ["52400"], type: "disbursement" },
-  { category: "Training and Development", accountCodes: ["52500"], type: "disbursement" },
+  { category: "Personnel Services", accountCodes: ["51110", "51120", "51130", "51140", "51150", "51160", "51170", "55110", "55120", "55130", "55140", "55150", "55160", "55170", "56110", "54110", "52110", "53110"], type: "disbursement" },
+   { category: "Utilities", accountCodes: ["51230", "55220", "56230"], type: "disbursement" },
+   { category: "Rent", accountCodes: ["55220"], type: "disbursement" },
+   { category: "Depreciation", accountCodes: ["57210", "57220", "57230"], type: "disbursement" },
+   { category: "Supplies", accountCodes: ["51210", "51220", "55210"], type: "disbursement" },
+   { category: "Professional Fees", accountCodes: ["55240", "55280"], type: "disbursement" },
+   { category: "Taxes and Licenses", accountCodes: ["55270"], type: "disbursement" },
+   { category: "Miscellaneous", accountCodes: ["57600", "57700"], type: "disbursement" },
+   { category: "Insurance", accountCodes: ["55260"], type: "disbursement" },
+   { category: "Repairs and Maintenance", accountCodes: ["51250", "56210"], type: "disbursement" },
+   { category: "Interest", accountCodes: ["57110", "57120", "57130"], type: "disbursement" },
+   { category: "Training and Development", accountCodes: ["53230"], type: "disbursement" },
 ]
 
 export const activitySchedule = {
