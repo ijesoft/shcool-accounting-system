@@ -957,6 +957,16 @@ export async function createEntitySchema(schemaName: string): Promise<void> {
     }
   }
 
+  await migrateEntitySchema(schemaName)
+}
+
+/**
+ * Applies idempotent migrations (ALTER TABLE ADD COLUMN IF NOT EXISTS,
+ * CREATE TABLE IF NOT EXISTS) to an existing entity schema. Safe to run
+ * repeatedly on any entity. Used both by createEntitySchema() and by the
+ * `db:migrate-entities` script to backfill columns into pre-existing schemas.
+ */
+export async function migrateEntitySchema(schemaName: string): Promise<void> {
   const migrations = `
     ALTER TABLE "${schemaName}".student_invoice ADD COLUMN IF NOT EXISTS term_start_date DATE;
     ALTER TABLE "${schemaName}".student_invoice ADD COLUMN IF NOT EXISTS term_end_date DATE;
@@ -1113,6 +1123,45 @@ export async function createEntitySchema(schemaName: string): Promise<void> {
       updated_at TIMESTAMPTZ DEFAULT NOW(),
       UNIQUE(fiscal_year_id, account_id)
     );
+
+    -- Idempotent backfill of sub-accounts required by the billing engine.
+    -- Earlier seed runs (phase1 chart) didn't include these leaf codes.
+    INSERT INTO "${schemaName}".account (account_code, account_name, account_type, normal_balance, level) VALUES
+      ('21310', 'Unearned Tuition', 'liability', 'credit', 3),
+      ('21410', 'Output VAT', 'liability', 'credit', 3),
+      ('42000', 'Fee Revenue', 'revenue', 'credit', 1),
+      ('42100', 'Laboratory Fees', 'revenue', 'credit', 2),
+      ('42600', 'Miscellaneous Fees', 'revenue', 'credit', 2),
+      ('43000', 'Other Operating Revenue', 'revenue', 'credit', 1),
+      ('43100', 'Canteen Revenue', 'revenue', 'credit', 2)
+    ON CONFLICT (account_code) DO NOTHING;
+
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '21300') WHERE account_code = '21310' AND parent_id IS NULL;
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '21400') WHERE account_code = '21410' AND parent_id IS NULL;
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '42000') WHERE account_code IN ('42100','42600') AND parent_id IS NULL;
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '43000') WHERE account_code = '43100' AND parent_id IS NULL;
+
+    -- Subledger party tagging (per JE line). subledger_type on account drives
+    -- which party picker is shown; party_type/party_id on je_line stores it.
+    ALTER TABLE "${schemaName}".account
+      ADD COLUMN IF NOT EXISTS subledger_type VARCHAR(20)
+        CHECK (subledger_type IN ('student', 'vendor', 'employee') OR subledger_type IS NULL);
+
+    ALTER TABLE "${schemaName}".journal_entry_line
+      ADD COLUMN IF NOT EXISTS party_type VARCHAR(20)
+        CHECK (party_type IN ('student', 'vendor', 'employee') OR party_type IS NULL);
+
+    ALTER TABLE "${schemaName}".journal_entry_line
+      ADD COLUMN IF NOT EXISTS party_id UUID;
+
+    UPDATE "${schemaName}".account SET subledger_type = 'student'
+      WHERE subledger_type IS NULL AND account_code IN ('11210','11211','11212','11213','11214');
+
+    UPDATE "${schemaName}".account SET subledger_type = 'employee'
+      WHERE subledger_type IS NULL AND account_code IN ('11250','11260','21210');
+
+    UPDATE "${schemaName}".account SET subledger_type = 'vendor'
+      WHERE subledger_type IS NULL AND account_code IN ('21110','21120','21130','21140');
   `
 
   for (const stmt of migrations.split(";")) {
