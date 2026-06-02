@@ -6,12 +6,11 @@ export const budgetService = {
   async listBudgets(entitySchema: string, fiscalYearId?: string) {
     const yearFilter = fiscalYearId ? `WHERE b.fiscal_year_id = ${fiscalYearId}` : ""
     return prisma.$queryRawUnsafe<any[]>(
-      `SELECT b.*, a.account_code, a.account_name, fy.year as fiscal_year
+      `SELECT b.*, a.account_code, a.account_name
        FROM "${entitySchema}".budget b
        JOIN "${entitySchema}".account a ON a.id = b.account_id
-       JOIN public.fiscal_year fy ON fy.id = b.fiscal_year_id
        ${yearFilter}
-       ORDER BY fy.year, a.account_code`
+       ORDER BY a.account_code`
     )
   },
 
@@ -20,7 +19,7 @@ export const budgetService = {
   }) {
     const existing = await prisma.$queryRawUnsafe<any[]>(
       `SELECT id FROM "${entitySchema}".budget
-       WHERE fiscal_year_id = $1 AND account_id = $2`,
+       WHERE fiscal_year_id = $1::uuid AND account_id = $2::uuid`,
       data.fiscalYearId, data.accountId
     )
 
@@ -29,7 +28,7 @@ export const budgetService = {
       result = await prisma.$queryRawUnsafe<any[]>(
         `UPDATE "${entitySchema}".budget
          SET budgeted_amount = $1, notes = $2, updated_at = NOW()
-         WHERE fiscal_year_id = $3 AND account_id = $4
+         WHERE fiscal_year_id = $3::uuid AND account_id = $4::uuid
          RETURNING *`,
         data.budgetedAmount, data.notes || null,
         data.fiscalYearId, data.accountId
@@ -38,7 +37,7 @@ export const budgetService = {
       result = await prisma.$queryRawUnsafe<any[]>(
         `INSERT INTO "${entitySchema}".budget
          (fiscal_year_id, account_id, budgeted_amount, notes, created_by)
-         VALUES ($1, $2, $3, $4, $5)
+         VALUES ($1::uuid, $2::uuid, $3, $4, $5::uuid)
          RETURNING *`,
         data.fiscalYearId, data.accountId,
         data.budgetedAmount, data.notes || null, userId
@@ -59,7 +58,7 @@ export const budgetService = {
 
   async deleteBudget(entitySchema: string, userId: string, budgetId: string) {
     await prisma.$queryRawUnsafe(
-      `DELETE FROM "${entitySchema}".budget WHERE id = $1`,
+      `DELETE FROM "${entitySchema}".budget WHERE id = $1::uuid`,
       budgetId
     )
 

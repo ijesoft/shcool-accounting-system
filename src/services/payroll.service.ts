@@ -68,7 +68,7 @@ export const payrollService = {
     values.push(employeeId)
 
     const rows = await prisma.$queryRawUnsafe<any[]>(
-      `UPDATE "${entitySchema}".employee SET ${sets.join(", ")} WHERE id = $${idx} RETURNING *`,
+      `UPDATE "${entitySchema}".employee SET ${sets.join(", ")} WHERE id = $${idx}::uuid RETURNING *`,
       ...values
     )
 
@@ -86,7 +86,7 @@ export const payrollService = {
 
   async getEmployeeById(entitySchema: string, employeeId: string) {
     const rows = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT * FROM "${entitySchema}".employee WHERE id = $1`,
+      `SELECT * FROM "${entitySchema}".employee WHERE id = $1::uuid`,
       employeeId
     )
     return rows[0] || null
@@ -98,23 +98,23 @@ export const payrollService = {
     return prisma.$queryRawUnsafe<any[]>(
       `SELECT pr.*, e.full_name as created_by_name
        FROM "${entitySchema}".payroll_run pr
-       LEFT JOIN public."user" e ON e.id = pr.created_by
+       LEFT JOIN public.user_account e ON e.id = pr.created_by
        ORDER BY pr.run_date DESC`
     )
   },
 
   async getPayRun(entitySchema: string, payRunId: string) {
     const runs = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT * FROM "${entitySchema}".payroll_run WHERE id = $1`,
+      `SELECT * FROM "${entitySchema}".payroll_run WHERE id = $1::uuid`,
       payRunId
     )
     if (!runs[0]) return null
 
-    const lines = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT prl.*, e.full_name as employee_name, e.employee_code
-       FROM "${entitySchema}".payroll_run_line prl
-       JOIN "${entitySchema}".employee e ON e.id = prl.employee_id
-       WHERE prl.payroll_run_id = $1`,
+const lines = await prisma.$queryRawUnsafe<any[]>(
+        `SELECT prl.*, e.full_name as employee_name, e.employee_code
+        FROM "${entitySchema}".payroll_run_line prl
+        JOIN "${entitySchema}".employee e ON e.id = prl.employee_id
+        WHERE prl.payroll_run_id = $1::uuid`,
       payRunId
     )
 
@@ -125,7 +125,7 @@ export const payrollService = {
     runDate: string; payPeriodStart: string; payPeriodEnd: string
   }) {
     const runNumber = await prisma.$queryRawUnsafe<string[]>(
-      `SELECT CONCAT(prefix, '-', LPAD(CAST(next_number AS TEXT), 5, '0'))
+      `SELECT prefix || '-' || LPAD(CAST(next_number AS TEXT), 5, '0')
        FROM "${entitySchema}".number_series WHERE series_type = 'PR' LIMIT 1`
     )
 
@@ -136,10 +136,15 @@ export const payrollService = {
     const rows = await prisma.$queryRawUnsafe<any[]>(
       `INSERT INTO "${entitySchema}".payroll_run
        (run_number, run_date, pay_period_start, pay_period_end, status, created_by)
-       VALUES ($1, $2, $3, $4, 'draft', $5)
+       VALUES ($1, $2, $3, $4, 'draft', $5::uuid)
        RETURNING *`,
       runNumber[0], new Date(data.runDate), new Date(data.payPeriodStart),
       new Date(data.payPeriodEnd), userId
+    )
+
+    // Increment number series
+    await prisma.$queryRawUnsafe(
+      `UPDATE "${entitySchema}".number_series SET next_number = next_number + 1 WHERE series_type = 'PR'`
     )
 
     // Generate lines for all active employees
@@ -154,7 +159,11 @@ export const payrollService = {
           sss_employee, sss_employer, philhealth_employee, philhealth_employer,
           pagibig_employee, pagibig_employer, withholding_tax,
           total_deductions, net_pay, thirteenth_month_accrual)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+         VALUES ($1::uuid, $2::uuid,
+          $3, $4, $5,
+          $6, $7, $8, $9,
+          $10, $11, $12,
+          $13, $14, $15)`,
         rows[0].id, employeeId,
         calc.basicPay, calc.allowances, calc.grossPay,
         calc.sssEmployee, calc.sssEmployer,
@@ -175,7 +184,7 @@ export const payrollService = {
     await prisma.$queryRawUnsafe(
       `UPDATE "${entitySchema}".payroll_run
        SET total_gross_pay = $1, total_deductions = $2, total_net_pay = $3, updated_at = NOW()
-       WHERE id = $4`,
+       WHERE id = $4::uuid`,
       totals.grossPay, totals.deductions, totals.netPay, rows[0].id
     )
 

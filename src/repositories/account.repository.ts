@@ -9,7 +9,7 @@ export const accountRepository = {
 
   async findById(entitySchema: string, id: string) {
     const results = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT * FROM "${entitySchema}"."account" WHERE id = $1`,
+      `SELECT * FROM "${entitySchema}"."account" WHERE id::text = $1`,
       id
     )
     return results[0] || null
@@ -62,14 +62,14 @@ export const accountRepository = {
 
     if (sets.length === 0) {
       const results = await prisma.$queryRawUnsafe<any[]>(
-        `SELECT * FROM "${entitySchema}"."account" WHERE id = $1`, id
+        `SELECT * FROM "${entitySchema}"."account" WHERE id::text = $1`, id
       )
       return results[0]
     }
 
     values.push(id)
     const results = await prisma.$queryRawUnsafe<any[]>(
-      `UPDATE "${entitySchema}"."account" SET ${sets.join(", ")} WHERE id = $${idx} RETURNING *`,
+      `UPDATE "${entitySchema}"."account" SET ${sets.join(", ")} WHERE id::text = $${idx} RETURNING *`,
       ...values
     )
     return results[0]

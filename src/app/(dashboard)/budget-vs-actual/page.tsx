@@ -12,8 +12,8 @@ async function getBudgetData(entityId: string) {
     `SELECT fy.*, e.name as entity_name
      FROM public.fiscal_year fy
      JOIN public.entity e ON e.id = fy.entity_id
-     WHERE e.id = $1
-     ORDER BY fy.year DESC`,
+     WHERE e.id = $1::uuid
+     ORDER BY fy.start_date DESC`,
     entityId
   )
 
@@ -55,21 +55,21 @@ export default async function BudgetVsActualPage({ searchParams }: { searchParam
           <h1 className="text-3xl font-bold">Budget vs Actual</h1>
           <p className="text-sm text-muted-foreground">{entityName}</p>
         </div>
-        <select
-          className="rounded-md border px-3 py-2 text-sm bg-background"
-          defaultValue={fiscalYearId}
-          onChange={(e) => {
-            const url = new URL(window.location.href)
-            url.searchParams.set("fy", e.target.value)
-            window.location.href = url.toString()
-          }}
-        >
+        <div className="flex items-center gap-2">
           {fiscalYears.map((fy: any) => (
-            <option key={fy.id} value={fy.id}>
+            <a
+              key={fy.id}
+              href={`?fy=${fy.id}`}
+              className={`rounded-md px-3 py-2 text-sm border ${
+                fiscalYearId === fy.id
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-background hover:bg-muted border-border"
+              }`}
+            >
               FY {fy.year}
-            </option>
+            </a>
           ))}
-        </select>
+        </div>
       </div>
 
       {summary ? (

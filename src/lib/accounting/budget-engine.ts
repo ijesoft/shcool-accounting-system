@@ -37,13 +37,13 @@ export const budgetEngine = {
            JOIN "${entitySchema}".journal_entry je ON je.id = jel.journal_entry_id
            JOIN public.fiscal_period fp ON fp.id = je.fiscal_period_id
            WHERE je.status = 'posted'
-             AND fp.fiscal_year_id = '${fiscalYearId}'
+             AND fp.fiscal_year_id = '${fiscalYearId}'::uuid
              AND jel.account_id = a.id
           ), 0
         ) AS actual
       FROM "${entitySchema}".account a
       LEFT JOIN "${entitySchema}".budget b
-        ON b.account_id = a.id AND b.fiscal_year_id = '${fiscalYearId}'
+        ON b.account_id = a.id AND b.fiscal_year_id = '${fiscalYearId}'::uuid
       WHERE a.level >= 3
         AND a.account_type IN ('revenue', 'expense')
         ${accountFilter}

@@ -9,7 +9,7 @@ export const payrollExport = {
     employeeId: string
   ): Promise<string | null> {
     const payRun = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT * FROM "${entitySchema}".payroll_run WHERE id = $1`,
+      `SELECT * FROM "${entitySchema}".payroll_run WHERE id::text = $1`,
       payRunId
     )
     if (!payRun[0]) return null
@@ -18,8 +18,8 @@ export const payrollExport = {
       `SELECT prl.*, e.full_name, e.employee_code, e.position, e.department,
               e.tin, e.sss_number, e.philhealth_number, e.pagibig_number
        FROM "${entitySchema}".payroll_run_line prl
-       JOIN "${entitySchema}".employee e ON e.id = prl.employee_id
-       WHERE prl.payroll_run_id = $1 AND prl.employee_id = $2`,
+       JOIN "${entitySchema}".employee e ON e.id::text = prl.employee_id::text
+       WHERE prl.payroll_run_id::text = $1 AND prl.employee_id::text = $2`,
       payRunId, employeeId
     )
     if (!line[0]) return null

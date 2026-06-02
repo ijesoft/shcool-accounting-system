@@ -26,7 +26,9 @@ export async function GET() {
     if (!schema) return NextResponse.json(formatApiError("ERR_NOT_FOUND", "Entity not found"), { status: 404 })
 
     const entries = await journalEntryService.list(schema)
-    return NextResponse.json(formatApiResponse(entries))
+    // Convert BigInt to number for JSON serialization
+    const safeEntries = JSON.parse(JSON.stringify(entries, (_, v) => typeof v === 'bigint' ? Number(v) : v))
+    return NextResponse.json(formatApiResponse(safeEntries))
   } catch (error) {
     console.error("List JE error:", error)
     return NextResponse.json(formatApiError("ERR_INTERNAL", "Failed to list entries"), { status: 500 })

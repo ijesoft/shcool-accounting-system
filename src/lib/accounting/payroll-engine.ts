@@ -236,7 +236,7 @@ export const payrollEngine = {
     )
 
     const lines = employees.map(emp => {
-      const calc = this.calculateLine(emp.basic_pay, emp.allowances || 0)
+      const calc = this.calculateLine(Number(emp.basic_pay), Number(emp.allowances) || 0)
       return { employeeId: emp.id, calc }
     })
 

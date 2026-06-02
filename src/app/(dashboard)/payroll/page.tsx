@@ -16,7 +16,7 @@ async function getPayrollData(entityId: string) {
   const payRuns = await prisma.$queryRawUnsafe<any[]>(
     `SELECT pr.*, e.full_name as created_by_name
      FROM "${entity.schemaName}".payroll_run pr
-     LEFT JOIN public."user" e ON e.id = pr.created_by
+     LEFT JOIN public.user_account e ON e.id = pr.created_by
      ORDER BY pr.run_date DESC LIMIT 50`
   )
 

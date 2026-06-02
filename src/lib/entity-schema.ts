@@ -69,7 +69,7 @@ export async function createEntitySchema(schemaName: string): Promise<void> {
 
     CREATE TABLE IF NOT EXISTS "${schemaName}".number_series (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      series_type VARCHAR(10) NOT NULL CHECK (series_type IN ('JE','OR','CV','CD','CDV','PO','DV','PMT','INVOICE')),
+      series_type VARCHAR(10) NOT NULL CHECK (series_type IN ('JE','OR','CV','CD','CDV','PO','DV','PMT','INVOICE','PR')),
       prefix VARCHAR(10) NOT NULL,
       starting_number INT NOT NULL DEFAULT 1,
       next_number INT NOT NULL DEFAULT 1,
@@ -113,6 +113,18 @@ export async function createEntitySchema(schemaName: string): Promise<void> {
       vat_amount DECIMAL(18,2) DEFAULT 0
     );
 
+    CREATE TABLE IF NOT EXISTS "${schemaName}".student (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      student_number VARCHAR(30) NOT NULL UNIQUE,
+      full_name VARCHAR(200) NOT NULL,
+      course VARCHAR(100),
+      grade_level VARCHAR(20),
+      status VARCHAR(20) NOT NULL CHECK (status IN ('enrolled','graduated','transferred','withdrawn')),
+      contact_info JSONB,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
     CREATE TABLE IF NOT EXISTS "${schemaName}".sales_invoice (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       invoice_number VARCHAR(30) NOT NULL UNIQUE,
@@ -152,6 +164,30 @@ export async function createEntitySchema(schemaName: string): Promise<void> {
       vat_amount DECIMAL(18,2) DEFAULT 0
     );
 
+    CREATE TABLE IF NOT EXISTS "${schemaName}".disbursement (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      cv_number VARCHAR(30) NOT NULL UNIQUE,
+      cv_date DATE NOT NULL,
+      payee_type VARCHAR(10) NOT NULL CHECK (payee_type IN ('vendor','employee','student','other')),
+      payee_name VARCHAR(200) NOT NULL,
+      payee_address TEXT,
+      tin VARCHAR(20),
+      amount DECIMAL(18,2) NOT NULL,
+      payment_method VARCHAR(20) NOT NULL CHECK (payment_method IN ('check','cash','bank_transfer')),
+      check_number VARCHAR(50),
+      check_date DATE,
+      bank_account VARCHAR(50),
+      status VARCHAR(20) DEFAULT 'draft' CHECK (status IN ('draft','approved','paid','void')),
+      journal_entry_id UUID,
+      ap_invoice_id UUID,
+      withholding_tax_amount DECIMAL(18,2) DEFAULT 0,
+      withholding_tax_rate DECIMAL(5,2),
+      created_by UUID NOT NULL,
+      approved_by UUID,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
     CREATE TABLE IF NOT EXISTS "${schemaName}".bir_serial_range (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       document_type VARCHAR(30) NOT NULL CHECK (document_type IN ('invoice', 'official_receipt', 'acknowledgment_receipt')),
@@ -179,18 +215,6 @@ export async function createEntitySchema(schemaName: string): Promise<void> {
       tax_withheld DECIMAL(18,2) NOT NULL,
       withholding_date DATE NOT NULL,
       created_at TIMESTAMPTZ DEFAULT NOW()
-    );
-
-    CREATE TABLE IF NOT EXISTS "${schemaName}".student (
-      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      student_number VARCHAR(30) NOT NULL UNIQUE,
-      full_name VARCHAR(200) NOT NULL,
-      course VARCHAR(100),
-      grade_level VARCHAR(20),
-      status VARCHAR(20) NOT NULL CHECK (status IN ('enrolled','graduated','transferred','withdrawn')),
-      contact_info JSONB,
-      created_at TIMESTAMPTZ DEFAULT NOW(),
-      updated_at TIMESTAMPTZ DEFAULT NOW()
     );
 
     CREATE TABLE IF NOT EXISTS "${schemaName}".student_invoice (
@@ -251,30 +275,6 @@ export async function createEntitySchema(schemaName: string): Promise<void> {
       journal_entry_id UUID,
       official_receipt_id UUID,
       created_at TIMESTAMPTZ DEFAULT NOW()
-    );
-
-    CREATE TABLE IF NOT EXISTS "${schemaName}".disbursement (
-      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      cv_number VARCHAR(30) NOT NULL UNIQUE,
-      cv_date DATE NOT NULL,
-      payee_type VARCHAR(10) NOT NULL CHECK (payee_type IN ('vendor','employee','student','other')),
-      payee_name VARCHAR(200) NOT NULL,
-      payee_address TEXT,
-      tin VARCHAR(20),
-      amount DECIMAL(18,2) NOT NULL,
-      payment_method VARCHAR(20) NOT NULL CHECK (payment_method IN ('check','cash','bank_transfer')),
-      check_number VARCHAR(50),
-      check_date DATE,
-      bank_account VARCHAR(50),
-      status VARCHAR(20) DEFAULT 'draft' CHECK (status IN ('draft','approved','paid','void')),
-      journal_entry_id UUID,
-      ap_invoice_id UUID,
-      withholding_tax_amount DECIMAL(18,2) DEFAULT 0,
-      withholding_tax_rate DECIMAL(5,2),
-      created_by UUID NOT NULL,
-      approved_by UUID,
-      created_at TIMESTAMPTZ DEFAULT NOW(),
-      updated_at TIMESTAMPTZ DEFAULT NOW()
     );
 
     CREATE TABLE IF NOT EXISTS "${schemaName}".vendor_account (
@@ -538,7 +538,8 @@ export async function createEntitySchema(schemaName: string): Promise<void> {
       ('CV', 'CV', 1, 1),
       ('CD', 'CD', 1, 1),
       ('PMT', 'PMT', 1, 1),
-      ('INVOICE', 'INV', 1, 1);
+      ('INVOICE', 'INV', 1, 1),
+      ('PR', 'PR', 1, 1);
   `
 
   for (const stmt of sql.split(";")) {
