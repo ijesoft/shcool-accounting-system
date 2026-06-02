@@ -93,4 +93,18 @@ export const vendorAccountService = {
   async cancelInvoice(entitySchema: string, userId: string, invoiceId: string) {
     return apEngine.reverseVendorInvoice(entitySchema, userId, invoiceId)
   },
+
+  async getGlActivity(entitySchema: string, vendorId: string) {
+    return prisma.$queryRawUnsafe<any[]>(
+      `SELECT je.id as entry_id, jel.id as line_id, jel.debit, jel.credit, jel.line_description,
+              a.account_code, a.account_name,
+              je.entry_number, je.entry_date, je.status
+       FROM "${entitySchema}".journal_entry_line jel
+       JOIN "${entitySchema}".journal_entry je ON je.id = jel.journal_entry_id
+       JOIN "${entitySchema}".account a ON a.id = jel.account_id
+       WHERE jel.party_type = 'vendor' AND jel.party_id = $1::uuid
+       ORDER BY je.entry_date DESC, je.created_at DESC`,
+      vendorId
+    )
+  },
 }
