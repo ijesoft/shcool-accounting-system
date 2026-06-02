@@ -13,7 +13,7 @@ export const vendorAccountService = {
 
   async getById(entitySchema: string, id: string) {
     const rows = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT * FROM "${entitySchema}".vendor_account WHERE id = $1`, id
+      `SELECT * FROM "${entitySchema}".vendor_account WHERE id = $1::uuid`, id
     )
     return rows[0] || null
   },
@@ -33,7 +33,7 @@ export const vendorAccountService = {
   async getInvoices(entitySchema: string, vendorId: string) {
     return prisma.$queryRawUnsafe<any[]>(
       `SELECT * FROM "${entitySchema}".vendor_invoice
-       WHERE vendor_id = $1
+       WHERE vendor_id = $1::uuid
        ORDER BY invoice_date DESC`,
       vendorId
     )

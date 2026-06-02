@@ -13,7 +13,7 @@ export const cashDisbursementsService = {
 
   async getById(entitySchema: string, id: string) {
     const rows = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT * FROM "${entitySchema}".disbursement WHERE id = $1`, id
+      `SELECT * FROM "${entitySchema}".disbursement WHERE id = $1::uuid`, id
     )
     return rows[0] || null
   },
@@ -98,13 +98,13 @@ export const cashDisbursementsService = {
     }
 
     await prisma.$queryRawUnsafe(
-      `UPDATE "${entitySchema}".disbursement SET journal_entry_id = $1, status = 'paid' WHERE id = $2`,
+      `UPDATE "${entitySchema}".disbursement SET journal_entry_id = $1::uuid, status = 'paid' WHERE id = $2::uuid`,
       entry.id, disbursementId
     )
 
     if (dv.ap_invoice_id) {
       await prisma.$queryRawUnsafe(
-        `UPDATE "${entitySchema}".vendor_invoice SET balance = balance - $1, status = CASE WHEN balance - $1 <= 0 THEN 'paid' WHEN balance - $1 < total_amount THEN 'partial' ELSE status END WHERE id = $2`,
+        `UPDATE "${entitySchema}".vendor_invoice SET balance = balance - $1, status = CASE WHEN balance - $1 <= 0 THEN 'paid' WHEN balance - $1 < total_amount THEN 'partial' ELSE status END WHERE id = $2::uuid`,
         dv.amount, dv.ap_invoice_id
       )
     }

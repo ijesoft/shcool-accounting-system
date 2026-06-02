@@ -7,7 +7,7 @@ export const ledgerRepository = {
         `SELECT gl.*, a.account_code, a.account_name, a.account_type
          FROM "${entitySchema}".general_ledger gl
          JOIN "${entitySchema}".account a ON a.id = gl.account_id
-         WHERE gl.fiscal_period_id = $1
+         WHERE gl.fiscal_period_id = $1::uuid
          ORDER BY a.account_code`,
         fiscalPeriodId
       )
@@ -56,7 +56,7 @@ export const ledgerRepository = {
                 END as balance
          FROM "${entitySchema}".general_ledger gl
          JOIN "${entitySchema}".account a ON a.id = gl.account_id
-         WHERE gl.fiscal_period_id = $1
+         WHERE gl.fiscal_period_id = $1::uuid
          ORDER BY a.account_code`,
         fiscalPeriodId
       )

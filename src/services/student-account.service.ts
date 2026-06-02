@@ -13,7 +13,7 @@ export const studentAccountService = {
 
   async getById(entitySchema: string, id: string) {
     const rows = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT * FROM "${entitySchema}".student WHERE id = $1`, id
+      `SELECT * FROM "${entitySchema}".student WHERE id = $1::uuid`, id
     )
     return rows[0] || null
   },
@@ -47,7 +47,7 @@ export const studentAccountService = {
         (SELECT COALESCE(JSON_AGG(json_build_object('fee_type', sil.fee_type, 'amount', sil.amount, 'discount_type', sil.discount_type, 'discount_amount', sil.discount_amount)), '[]'::json)
          FROM "${entitySchema}".student_invoice_line sil WHERE sil.invoice_id = si.id) as lines
        FROM "${entitySchema}".student_invoice si
-       WHERE si.student_id = $1
+       WHERE si.student_id = $1::uuid
        ORDER BY si.invoice_date DESC`,
       studentId
     )
@@ -121,7 +121,7 @@ export const studentAccountService = {
       `SELECT pt.*, si.invoice_number
        FROM "${entitySchema}".payment_transaction pt
        LEFT JOIN "${entitySchema}".student_invoice si ON si.id = pt.invoice_id
-       WHERE pt.student_id = $1
+       WHERE pt.student_id = $1::uuid
        ORDER BY pt.payment_date DESC`,
       studentId
     )

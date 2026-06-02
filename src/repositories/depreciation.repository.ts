@@ -6,7 +6,7 @@ export const depreciationRepository = {
       `SELECT de.*, fa.asset_code, fa.asset_name, fa.depreciation_method
        FROM "${entitySchema}".depreciation_entry de
        JOIN "${entitySchema}".fixed_asset fa ON fa.id = de.fixed_asset_id
-       WHERE de.fiscal_period_id = $1
+       WHERE de.fiscal_period_id = $1::uuid
        ORDER BY fa.asset_code`,
       fiscalPeriodId
     )
@@ -15,7 +15,7 @@ export const depreciationRepository = {
   async hasDepreciationForPeriod(entitySchema: string, assetId: string, fiscalPeriodId: string) {
     const rows = await prisma.$queryRawUnsafe<any[]>(
       `SELECT COUNT(*) as count FROM "${entitySchema}".depreciation_entry
-       WHERE fixed_asset_id = $1 AND fiscal_period_id = $2`,
+       WHERE fixed_asset_id = $1::uuid AND fiscal_period_id = $2::uuid`,
       assetId, fiscalPeriodId
     )
     return Number(rows[0]?.count || 0) > 0

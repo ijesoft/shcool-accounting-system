@@ -8,7 +8,7 @@ export const officialReceiptService = {
       `SELECT or_.*, pt.id as payment_id, pt.invoice_id, pt.amount as payment_amount, pt.journal_entry_id as payment_je_id
        FROM "${entitySchema}".official_receipt or_
        LEFT JOIN "${entitySchema}".payment_transaction pt ON pt.id = or_.cash_receipt_id
-       WHERE or_.id = $1`,
+       WHERE or_.id = $1::uuid`,
       receiptId
     )
     const receipt = rows[0]
@@ -28,7 +28,7 @@ export const officialReceiptService = {
     await prisma.$queryRawUnsafe(
       `UPDATE "${entitySchema}".official_receipt
        SET status = 'void', void_reason = $2
-       WHERE id = $1`,
+       WHERE id = $1::uuid`,
       receiptId,
       reason || null
     )
@@ -37,7 +37,7 @@ export const officialReceiptService = {
       await prisma.$queryRawUnsafe(
         `UPDATE "${entitySchema}".payment_transaction
          SET journal_entry_id = NULL, official_receipt_id = NULL
-         WHERE id = $1`,
+         WHERE id = $1::uuid`,
         receipt.payment_id
       )
     }
@@ -52,7 +52,7 @@ export const officialReceiptService = {
                ELSE status
              END,
              updated_at = NOW()
-         WHERE id = $2`,
+         WHERE id = $2::uuid`,
         receipt.payment_amount,
         receipt.invoice_id
       )

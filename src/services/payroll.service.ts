@@ -239,8 +239,8 @@ const lines = await prisma.$queryRawUnsafe<any[]>(
     // Update pay run
     await prisma.$queryRawUnsafe(
       `UPDATE "${entitySchema}".payroll_run
-       SET status = 'posted', journal_entry_id = $1, updated_at = NOW()
-       WHERE id = $2`,
+       SET status = 'posted', journal_entry_id = $1::uuid, updated_at = NOW()
+       WHERE id = $2::uuid`,
       entry!.id, payRunId
     )
 
@@ -262,7 +262,7 @@ const lines = await prisma.$queryRawUnsafe<any[]>(
     if (payRun.status !== "posted") throw new Error("Only posted pay runs can be voided")
 
     await prisma.$queryRawUnsafe(
-      `UPDATE "${entitySchema}".payroll_run SET status = 'void', updated_at = NOW() WHERE id = $1`,
+      `UPDATE "${entitySchema}".payroll_run SET status = 'void', updated_at = NOW() WHERE id = $1::uuid`,
       payRunId
     )
 

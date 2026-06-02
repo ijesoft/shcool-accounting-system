@@ -25,7 +25,7 @@ export const fixedAssetService = {
         ) ORDER BY de.created_at), '[]'::json)
          FROM "${entitySchema}".depreciation_entry de WHERE de.fixed_asset_id = fa.id) as depreciation_schedule
        FROM "${entitySchema}".fixed_asset fa
-       WHERE fa.id = $1`, id
+       WHERE fa.id = $1::uuid`, id
     )
     return rows[0] || null
   },
@@ -70,14 +70,14 @@ export const fixedAssetService = {
       `SELECT de.*, je.entry_number
        FROM "${entitySchema}".depreciation_entry de
        LEFT JOIN "${entitySchema}".journal_entry je ON je.id = de.journal_entry_id
-       WHERE de.fixed_asset_id = $1
+       WHERE de.fixed_asset_id = $1::uuid
        ORDER BY de.created_at`, assetId
     )
   },
 
   async generateDepreciationSchedule(entitySchema: string, assetId: string) {
     const rows = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT * FROM "${entitySchema}".fixed_asset WHERE id = $1`, assetId
+      `SELECT * FROM "${entitySchema}".fixed_asset WHERE id = $1::uuid`, assetId
     )
     const asset = rows[0]
     if (!asset) throw new Error("Asset not found")
@@ -106,7 +106,7 @@ export const fixedAssetService = {
 
   async depreciate(entitySchema: string, assetId: string, fiscalPeriodId: string, userId: string) {
     const rows = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT * FROM "${entitySchema}".fixed_asset WHERE id = $1`, assetId
+      `SELECT * FROM "${entitySchema}".fixed_asset WHERE id = $1::uuid`, assetId
     )
     const asset = rows[0]
     if (!asset) throw new Error("Asset not found")
@@ -176,7 +176,7 @@ export const fixedAssetService = {
       `UPDATE "${entitySchema}".fixed_asset
        SET accumulated_depreciation = accumulated_depreciation + $1,
            status = CASE WHEN accumulated_depreciation + $1 >= $2 THEN 'fully_depreciated' ELSE 'active' END
-       WHERE id = $3`,
+       WHERE id = $3::uuid`,
       depAmount, depreciableBase, assetId
     )
 
@@ -199,7 +199,7 @@ export const fixedAssetService = {
 
   async dispose(entitySchema: string, assetId: string, disposalDate: string, disposalAmount: number, userId: string) {
     const rows = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT * FROM "${entitySchema}".fixed_asset WHERE id = $1`, assetId
+      `SELECT * FROM "${entitySchema}".fixed_asset WHERE id = $1::uuid`, assetId
     )
     const asset = rows[0]
     if (!asset) throw new Error("Asset not found")
@@ -259,8 +259,8 @@ export const fixedAssetService = {
 
     await prisma.$queryRawUnsafe(
       `UPDATE "${entitySchema}".fixed_asset
-       SET status = 'disposed', disposal_date = $1::date, disposal_amount = $2, journal_entry_id = $3
-       WHERE id = $4`,
+       SET status = 'disposed', disposal_date = $1::date, disposal_amount = $2, journal_entry_id = $3::uuid
+       WHERE id = $4::uuid`,
       disposalDate, disposalAmount, entry!.id, assetId
     )
 

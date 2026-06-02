@@ -25,7 +25,7 @@ export const accountRepository = {
 
   async findChildren(entitySchema: string, parentId: string) {
     return prisma.$queryRawUnsafe<any[]>(
-      `SELECT * FROM "${entitySchema}"."account" WHERE parent_id = $1 ORDER BY account_code`,
+      `SELECT * FROM "${entitySchema}"."account" WHERE parent_id = $1::uuid ORDER BY account_code`,
       parentId
     )
   },

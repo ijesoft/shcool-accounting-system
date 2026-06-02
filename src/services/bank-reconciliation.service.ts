@@ -47,14 +47,14 @@ export const bankReconciliationService = {
       `SELECT br.*, ba.bank_name, ba.account_number
        FROM "${entitySchema}".bank_reconciliation br
        LEFT JOIN "${entitySchema}".bank_account ba ON ba.id = br.bank_account_id
-       WHERE br.id = $1`, id
+       WHERE br.id = $1::uuid`, id
     )
     const reconciliation = rows[0]
     if (!reconciliation) return null
 
     const items = await prisma.$queryRawUnsafe<any[]>(
       `SELECT * FROM "${entitySchema}".reconciliation_item
-       WHERE reconciliation_id = $1
+       WHERE reconciliation_id = $1::uuid
        ORDER BY created_at`, id
     )
 
@@ -99,7 +99,7 @@ export const bankReconciliationService = {
 
   async uploadStatement(entitySchema: string, reconciliationId: string, csvContent: string) {
     const rows = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT * FROM "${entitySchema}".bank_reconciliation WHERE id = $1`, reconciliationId
+      `SELECT * FROM "${entitySchema}".bank_reconciliation WHERE id = $1::uuid`, reconciliationId
     )
     if (!rows[0]) throw new Error("Reconciliation not found")
 
@@ -124,13 +124,13 @@ export const bankReconciliationService = {
 
   async autoMatch(entitySchema: string, reconciliationId: string) {
     const recs = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT * FROM "${entitySchema}".bank_reconciliation WHERE id = $1`, reconciliationId
+      `SELECT * FROM "${entitySchema}".bank_reconciliation WHERE id = $1::uuid`, reconciliationId
     )
     if (!recs[0]) throw new Error("Reconciliation not found")
 
     const statementItems = await prisma.$queryRawUnsafe<any[]>(
       `SELECT * FROM "${entitySchema}".reconciliation_item
-       WHERE reconciliation_id = $1 AND is_cleared = FALSE AND type IN ('deposit_in_transit', 'outstanding_check')`,
+       WHERE reconciliation_id = $1::uuid AND is_cleared = FALSE AND type IN ('deposit_in_transit', 'outstanding_check')`,
       reconciliationId
     )
 
@@ -141,7 +141,7 @@ export const bankReconciliationService = {
        JOIN "${entitySchema}".account a ON a.id = jel.account_id
        WHERE je.status = 'posted'
           AND a.account_code = '11121'
-         AND je.entry_date <= (SELECT statement_date FROM "${entitySchema}".bank_reconciliation WHERE id = $1)` as any,
+         AND je.entry_date <= (SELECT statement_date FROM "${entitySchema}".bank_reconciliation WHERE id = $1::uuid)` as any,
       reconciliationId
     )
 
@@ -174,14 +174,14 @@ export const bankReconciliationService = {
 
   async getSummary(entitySchema: string, reconciliationId: string) {
     const recs = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT * FROM "${entitySchema}".bank_reconciliation WHERE id = $1`, reconciliationId
+      `SELECT * FROM "${entitySchema}".bank_reconciliation WHERE id = $1::uuid`, reconciliationId
     )
     if (!recs[0]) throw new Error("Reconciliation not found")
 
     const items = await prisma.$queryRawUnsafe<any[]>(
       `SELECT type, COALESCE(SUM(amount), 0) as total
        FROM "${entitySchema}".reconciliation_item
-       WHERE reconciliation_id = $1
+       WHERE reconciliation_id = $1::uuid
        GROUP BY type`, reconciliationId
     )
 
@@ -219,14 +219,14 @@ export const bankReconciliationService = {
 
   async reconcile(entitySchema: string, reconciliationId: string, userId: string) {
     const rows = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT * FROM "${entitySchema}".bank_reconciliation WHERE id = $1`, reconciliationId
+      `SELECT * FROM "${entitySchema}".bank_reconciliation WHERE id = $1::uuid`, reconciliationId
     )
     const rec = rows[0]
     if (!rec) throw new Error("Reconciliation not found")
     if (rec.status === "completed") throw new Error("Already completed")
 
     const items = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT * FROM "${entitySchema}".reconciliation_item WHERE reconciliation_id = $1`, reconciliationId
+      `SELECT * FROM "${entitySchema}".reconciliation_item WHERE reconciliation_id = $1::uuid`, reconciliationId
     )
 
     const adjItems = items.filter((i: any) =>
@@ -301,19 +301,19 @@ export const bankReconciliationService = {
         }
 
         await prisma.$queryRawUnsafe(
-          `UPDATE "${entitySchema}".reconciliation_item SET journal_entry_id = $1 WHERE id = $2`,
+          `UPDATE "${entitySchema}".reconciliation_item SET journal_entry_id = $1::uuid WHERE id = $2::uuid`,
           entry!.id, item.id
         )
       }
     }
 
     await prisma.$queryRawUnsafe(
-      `UPDATE "${entitySchema}".reconciliation_item SET is_cleared = TRUE WHERE reconciliation_id = $1 AND type IN ('deposit_in_transit', 'outstanding_check')`,
+      `UPDATE "${entitySchema}".reconciliation_item SET is_cleared = TRUE WHERE reconciliation_id = $1::uuid AND type IN ('deposit_in_transit', 'outstanding_check')`,
       reconciliationId
     )
 
     await prisma.$queryRawUnsafe(
-      `UPDATE "${entitySchema}".bank_reconciliation SET status = 'completed', completed_at = NOW() WHERE id = $1`,
+      `UPDATE "${entitySchema}".bank_reconciliation SET status = 'completed', completed_at = NOW() WHERE id = $1::uuid`,
       reconciliationId
     )
 

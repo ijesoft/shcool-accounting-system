@@ -25,7 +25,7 @@ export const enrollmentDepositService = {
     invoiceId: string
   ) {
     const paymentRows = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT * FROM "${entitySchema}".payment_transaction WHERE id = $1`,
+      `SELECT * FROM "${entitySchema}".payment_transaction WHERE id = $1::uuid`,
       paymentId
     )
     const payment = paymentRows[0]
@@ -38,7 +38,7 @@ export const enrollmentDepositService = {
     }
 
     const invoiceRows = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT * FROM "${entitySchema}".student_invoice WHERE id = $1`,
+      `SELECT * FROM "${entitySchema}".student_invoice WHERE id = $1::uuid`,
       invoiceId
     )
     const invoice = invoiceRows[0]
@@ -96,15 +96,15 @@ export const enrollmentDepositService = {
              ELSE status
            END,
            updated_at = NOW()
-       WHERE id = $2`,
+       WHERE id = $2::uuid`,
       amount,
       invoiceId
     )
 
     await prisma.$queryRawUnsafe(
       `UPDATE "${entitySchema}".payment_transaction
-       SET deposit_status = 'applied', invoice_id = $2
-       WHERE id = $1`,
+       SET deposit_status = 'applied', invoice_id = $2::uuid
+       WHERE id = $1::uuid`,
       paymentId,
       invoiceId
     )
@@ -114,7 +114,7 @@ export const enrollmentDepositService = {
 
   async convertToUnearnedTuition(entitySchema: string, userId: string, paymentId: string) {
     const paymentRows = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT * FROM "${entitySchema}".payment_transaction WHERE id = $1`,
+      `SELECT * FROM "${entitySchema}".payment_transaction WHERE id = $1::uuid`,
       paymentId
     )
     const payment = paymentRows[0]
@@ -169,7 +169,7 @@ export const enrollmentDepositService = {
     }
 
     await prisma.$queryRawUnsafe(
-      `UPDATE "${entitySchema}".payment_transaction SET deposit_status = 'applied' WHERE id = $1`,
+      `UPDATE "${entitySchema}".payment_transaction SET deposit_status = 'applied' WHERE id = $1::uuid`,
       paymentId
     )
 
@@ -178,7 +178,7 @@ export const enrollmentDepositService = {
 
   async refund(entitySchema: string, userId: string, paymentId: string) {
     const paymentRows = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT * FROM "${entitySchema}".payment_transaction WHERE id = $1`,
+      `SELECT * FROM "${entitySchema}".payment_transaction WHERE id = $1::uuid`,
       paymentId
     )
     const payment = paymentRows[0]
@@ -205,7 +205,7 @@ export const enrollmentDepositService = {
     await prisma.$queryRawUnsafe(
       `UPDATE "${entitySchema}".payment_transaction
        SET deposit_status = 'refunded', journal_entry_id = NULL
-       WHERE id = $1`,
+       WHERE id = $1::uuid`,
       paymentId
     )
 
@@ -234,7 +234,7 @@ export const enrollmentDepositService = {
        LEFT JOIN "${entitySchema}".student s ON s.id = pt.student_id
        WHERE pt.payment_type = 'enrollment_deposit'
          AND pt.deposit_status = 'held'
-         AND ($1::uuid IS NULL OR pt.student_id = $1)
+         AND ($1::uuid IS NULL OR pt.student_id = $1::uuid)
        ORDER BY pt.payment_date DESC`,
       studentId || null
     )

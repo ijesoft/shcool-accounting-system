@@ -14,7 +14,7 @@ export const journalEntryRepository = {
 
   async findById(entitySchema: string, id: string) {
     const entries = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT * FROM "${entitySchema}".journal_entry WHERE id = $1`,
+      `SELECT * FROM "${entitySchema}".journal_entry WHERE id = $1::uuid`,
       id
     )
     if (!entries[0]) return null
@@ -23,7 +23,7 @@ export const journalEntryRepository = {
       `SELECT jel.*, a.account_code, a.account_name 
        FROM "${entitySchema}".journal_entry_line jel
        JOIN "${entitySchema}".account a ON a.id = jel.account_id
-       WHERE jel.journal_entry_id = $1
+       WHERE jel.journal_entry_id = $1::uuid
        ORDER BY jel.line_order`,
       id
     )
@@ -100,7 +100,7 @@ export const journalEntryRepository = {
 
     if (data.lines) {
       await prisma.$queryRawUnsafe(
-        `DELETE FROM "${entitySchema}".journal_entry_line WHERE journal_entry_id = $1`,
+        `DELETE FROM "${entitySchema}".journal_entry_line WHERE journal_entry_id = $1::uuid`,
         id
       )
       for (const line of data.lines) {

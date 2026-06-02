@@ -23,7 +23,7 @@ export const cashReceiptsService = {
        FROM "${entitySchema}".payment_transaction pt
        LEFT JOIN "${entitySchema}".student s ON s.id = pt.student_id
        LEFT JOIN "${entitySchema}".student_invoice si ON si.id = pt.invoice_id
-       WHERE pt.id = $1`, id
+       WHERE pt.id = $1::uuid`, id
     )
     return rows[0] || null
   },
@@ -186,13 +186,13 @@ export const cashReceiptsService = {
     )
 
     await prisma.$queryRawUnsafe(
-      `UPDATE "${entitySchema}".payment_transaction SET journal_entry_id = $1, official_receipt_id = $2 WHERE id = $3`,
+      `UPDATE "${entitySchema}".payment_transaction SET journal_entry_id = $1::uuid, official_receipt_id = $2::uuid WHERE id = $3::uuid`,
       entry.id, orId, paymentId
     )
 
     if (payment.invoice_id && !isDeposit) {
       await prisma.$queryRawUnsafe(
-        `UPDATE "${entitySchema}".student_invoice SET balance = balance - $1, status = CASE WHEN balance - $1 <= 0 THEN 'paid' WHEN balance - $1 < total_amount THEN 'partial' ELSE status END WHERE id = $2`,
+        `UPDATE "${entitySchema}".student_invoice SET balance = balance - $1, status = CASE WHEN balance - $1 <= 0 THEN 'paid' WHEN balance - $1 < total_amount THEN 'partial' ELSE status END WHERE id = $2::uuid`,
         payment.amount, payment.invoice_id
       )
     }

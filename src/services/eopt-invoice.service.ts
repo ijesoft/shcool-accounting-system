@@ -162,7 +162,7 @@ export const eoptInvoiceService = {
         )), '[]'::json)
         FROM "${entitySchema}".sales_invoice_line sil WHERE sil.sales_invoice_id = si.id) as lines
       FROM "${entitySchema}".sales_invoice si
-      WHERE si.id = $1`,
+      WHERE si.id = $1::uuid`,
       id
     )
     return rows[0] || null
@@ -172,7 +172,7 @@ export const eoptInvoiceService = {
     const rows = await prisma.$queryRawUnsafe<any[]>(
       `UPDATE "${entitySchema}".sales_invoice
        SET status = 'void', void_reason = $1, updated_at = NOW()
-       WHERE id = $2 AND status = 'active'
+       WHERE id = $2::uuid AND status = 'active'
        RETURNING *`,
       reason, id
     )

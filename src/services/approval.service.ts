@@ -27,7 +27,7 @@ export const approvalService = {
 
   async approve(entitySchema: string, entryId: string, userId: string, comments?: string) {
     const user = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT role_id FROM public.user_account WHERE id = $1`, userId
+      `SELECT role_id FROM public.user_account WHERE id = $1::uuid`, userId
     )
     if (!user[0]) throw { status: 404, message: "User not found" }
 

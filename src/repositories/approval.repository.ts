@@ -12,7 +12,7 @@ export const approvalRepository = {
        AND je.id IN (
          SELECT ar.record_id FROM "${entitySchema}".approval_request ar
          WHERE ar.status = 'pending'
-         AND ar.approver_role_id = $2
+         AND ar.approver_role_id = $2::uuid
        )
        GROUP BY je.id
        ORDER BY je.created_at DESC`,
@@ -28,7 +28,7 @@ export const approvalRepository = {
        JOIN public.role r ON r.id = u.role_id
        WHERE aa.approval_request_id IN (
          SELECT ar.id FROM "${entitySchema}".approval_request ar
-         WHERE ar.record_id = $1
+         WHERE ar.record_id = $1::uuid
        )
        ORDER BY aa.created_at`,
       entryId
