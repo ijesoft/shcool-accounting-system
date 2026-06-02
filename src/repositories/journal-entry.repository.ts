@@ -20,9 +20,19 @@ export const journalEntryRepository = {
     if (!entries[0]) return null
 
     const lines = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT jel.*, a.account_code, a.account_name 
+      `SELECT jel.*, a.account_code, a.account_name,
+              jel.party_type, jel.party_id,
+              CASE jel.party_type
+                WHEN 'student'  THEN s.full_name
+                WHEN 'vendor'   THEN v.vendor_name
+                WHEN 'employee' THEN e.full_name
+                ELSE NULL
+              END as party_name
        FROM "${entitySchema}".journal_entry_line jel
        JOIN "${entitySchema}".account a ON a.id = jel.account_id
+       LEFT JOIN "${entitySchema}".student        s ON jel.party_type = 'student'  AND s.id = jel.party_id
+       LEFT JOIN "${entitySchema}".vendor_account v ON jel.party_type = 'vendor'   AND v.id = jel.party_id
+       LEFT JOIN "${entitySchema}".employee       e ON jel.party_type = 'employee' AND e.id = jel.party_id
        WHERE jel.journal_entry_id = $1::uuid
        ORDER BY jel.line_order`,
       id
@@ -39,7 +49,7 @@ export const journalEntryRepository = {
       sourceModule: string
       description?: string
       createdBy: string
-      lines: { accountId: string; debit: number; credit: number; lineDescription?: string; lineOrder: number }[]
+      lines: { accountId: string; debit: number; credit: number; lineDescription?: string; lineOrder: number; partyType?: string; partyId?: string }[]
     }
   ) {
     const result = await prisma.$queryRawUnsafe<any[]>(
@@ -48,7 +58,7 @@ export const journalEntryRepository = {
        VALUES (
          (SELECT CONCAT(prefix, '-', LPAD(CAST(next_number AS TEXT), 5, '0'))
           FROM "${entitySchema}".number_series WHERE series_type = 'JE' LIMIT 1),
-         $1, $2, $3, $4, 'draft', $5
+         $1::date, $2, $3, $4, 'draft', $5::uuid
        ) RETURNING *`,
       new Date(data.entryDate), data.reference || null, data.sourceModule, data.description || null, data.createdBy
     )
@@ -57,9 +67,16 @@ export const journalEntryRepository = {
     for (const line of data.lines) {
       await prisma.$queryRawUnsafe(
         `INSERT INTO "${entitySchema}".journal_entry_line
-         (journal_entry_id, account_id, debit, credit, line_description, line_order)
-         VALUES ($1, $2, $3, $4, $5, $6)`,
-        entry.id, line.accountId, line.debit, line.credit, line.lineDescription || null, line.lineOrder
+         (journal_entry_id, account_id, debit, credit, line_description, line_order, party_type, party_id)
+         VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6, $7, $8::uuid)`,
+        entry.id,
+        line.accountId,
+        line.debit,
+        line.credit,
+        line.lineDescription || null,
+        line.lineOrder,
+        line.partyType || null,
+        line.partyId || null
       )
     }
 
@@ -77,7 +94,7 @@ export const journalEntryRepository = {
       entryDate?: string
       reference?: string
       description?: string
-      lines?: { accountId: string; debit: number; credit: number; lineDescription?: string; lineOrder: number }[]
+      lines?: { accountId: string; debit: number; credit: number; lineDescription?: string; lineOrder: number; partyType?: string; partyId?: string }[]
     }
   ) {
     if (data.entryDate || data.reference || data.description) {
@@ -106,9 +123,16 @@ export const journalEntryRepository = {
       for (const line of data.lines) {
         await prisma.$queryRawUnsafe(
           `INSERT INTO "${entitySchema}".journal_entry_line
-           (journal_entry_id, account_id, debit, credit, line_description, line_order)
-           VALUES ($1, $2, $3, $4, $5, $6)`,
-          id, line.accountId, line.debit, line.credit, line.lineDescription || null, line.lineOrder
+           (journal_entry_id, account_id, debit, credit, line_description, line_order, party_type, party_id)
+           VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6, $7, $8::uuid)`,
+          id,
+          line.accountId,
+          line.debit,
+          line.credit,
+          line.lineDescription || null,
+          line.lineOrder,
+          line.partyType || null,
+          line.partyId || null
         )
       }
     }
