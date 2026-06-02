@@ -5,10 +5,17 @@ import { redirect } from "next/navigation"
 import { cashDisbursementsService } from "@/services/cash-disbursements.service"
 import { prisma } from "@/lib/db"
 import { Button } from "@/components/ui/button"
+import { SearchPagination } from "@/components/ui/search-pagination"
 
 export const dynamic = "force-dynamic"
 
-export default async function CashDisbursementsPage() {
+const PAGE_SIZE = 20
+
+export default async function CashDisbursementsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; page?: string }>
+}) {
   const session = await getSession()
   if (!session.userId) redirect("/login")
   if (!hasPermission(session.roleName, "cash_disbursements", "read")) redirect("/")
@@ -17,7 +24,11 @@ export default async function CashDisbursementsPage() {
   const entity = await prisma.entity.findUnique({ where: { id: session.entityId } })
   if (!entity) return <p className="p-6 text-muted-foreground">Entity not found.</p>
 
-  const disbursements = await cashDisbursementsService.list(entity.schemaName)
+  const sp = await searchParams
+  const q = sp.q ?? ""
+  const page = Number(sp.page) || 1
+
+  const { rows: disbursements, total } = await cashDisbursementsService.list(entity.schemaName, { q, page, limit: PAGE_SIZE })
 
   return (
     <div className="space-y-6">
@@ -26,6 +37,15 @@ export default async function CashDisbursementsPage() {
         <Link href="/cash-disbursements/new"><Button>New Disbursement</Button></Link>
       </div>
       <div className="rounded-lg border bg-card">
+        <div className="px-4">
+          <SearchPagination
+            totalCount={total}
+            currentPage={page}
+            pageSize={PAGE_SIZE}
+            searchValue={q}
+            placeholder="Search by CV no., payee, status…"
+          />
+        </div>
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b bg-muted/50">

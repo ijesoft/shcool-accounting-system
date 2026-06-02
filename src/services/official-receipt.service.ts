@@ -3,6 +3,33 @@ import { postingEngine } from "@/lib/accounting/posting-engine"
 import { auditLog } from "@/lib/audit/audit-log"
 
 export const officialReceiptService = {
+  async list(entitySchema: string, opts?: { q?: string; page?: number; limit?: number }) {
+    const q = opts?.q ?? ""
+    const limit = opts?.limit ?? 20
+    const page = opts?.page ?? 1
+    const offset = (page - 1) * limit
+
+    const countRows = await prisma.$queryRawUnsafe<{ total: number }[]>(
+      `SELECT COUNT(*)::int as total
+       FROM "${entitySchema}".official_receipt or_
+       WHERE ($1 = '' OR or_.or_number ILIKE $2 OR COALESCE(or_.payor_name,'') ILIKE $2 OR COALESCE(or_.tin,'') ILIKE $2 OR COALESCE(or_.status,'') ILIKE $2)`,
+      q, `%${q}%`
+    )
+    const total = countRows[0]?.total ?? 0
+
+    const rows = await prisma.$queryRawUnsafe<any[]>(
+      `SELECT or_.*, pt.transaction_number as payment_ref
+       FROM "${entitySchema}".official_receipt or_
+       LEFT JOIN "${entitySchema}".payment_transaction pt ON pt.official_receipt_id = or_.id
+       WHERE ($1 = '' OR or_.or_number ILIKE $2 OR COALESCE(or_.payor_name,'') ILIKE $2 OR COALESCE(or_.tin,'') ILIKE $2 OR COALESCE(or_.status,'') ILIKE $2)
+       ORDER BY or_.created_at DESC
+       LIMIT $3 OFFSET $4`,
+      q, `%${q}%`, limit, offset
+    )
+
+    return { rows, total }
+  },
+
   async void(entitySchema: string, userId: string, receiptId: string, reason?: string) {
     const rows = await prisma.$queryRawUnsafe<any[]>(
       `SELECT or_.*, pt.id as payment_id, pt.invoice_id, pt.amount as payment_amount, pt.journal_entry_id as payment_je_id

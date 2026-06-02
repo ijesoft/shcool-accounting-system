@@ -7,10 +7,29 @@ import { auditLog } from "@/lib/audit/audit-log"
 export const payrollService = {
   // --- Employee CRUD ---
 
-  async listEmployees(entitySchema: string) {
-    return prisma.$queryRawUnsafe<any[]>(
-      `SELECT * FROM "${entitySchema}".employee ORDER BY full_name`
+  async listEmployees(entitySchema: string, opts?: { q?: string; page?: number; limit?: number }) {
+    const q = opts?.q ?? ""
+    const limit = opts?.limit ?? 20
+    const page = opts?.page ?? 1
+    const offset = (page - 1) * limit
+
+    const countRows = await prisma.$queryRawUnsafe<{ total: number }[]>(
+      `SELECT COUNT(*)::int as total
+       FROM "${entitySchema}".employee e
+       WHERE ($1 = '' OR e.full_name ILIKE $2 OR e.employee_code ILIKE $2 OR COALESCE(e.department,'') ILIKE $2 OR COALESCE(e.position,'') ILIKE $2)`,
+      q, `%${q}%`
     )
+    const total = countRows[0]?.total ?? 0
+
+    const rows = await prisma.$queryRawUnsafe<any[]>(
+      `SELECT * FROM "${entitySchema}".employee e
+       WHERE ($1 = '' OR e.full_name ILIKE $2 OR e.employee_code ILIKE $2 OR COALESCE(e.department,'') ILIKE $2 OR COALESCE(e.position,'') ILIKE $2)
+       ORDER BY e.full_name
+       LIMIT $3 OFFSET $4`,
+      q, `%${q}%`, limit, offset
+    )
+
+    return { rows, total }
   },
 
   async createEmployee(entitySchema: string, userId: string, data: {
@@ -94,13 +113,31 @@ export const payrollService = {
 
   // --- Payroll Run ---
 
-  async listPayRuns(entitySchema: string) {
-    return prisma.$queryRawUnsafe<any[]>(
+  async listPayRuns(entitySchema: string, opts?: { q?: string; page?: number; limit?: number }) {
+    const q = opts?.q ?? ""
+    const limit = opts?.limit ?? 20
+    const page = opts?.page ?? 1
+    const offset = (page - 1) * limit
+
+    const countRows = await prisma.$queryRawUnsafe<{ total: number }[]>(
+      `SELECT COUNT(*)::int as total
+       FROM "${entitySchema}".payroll_run pr
+       WHERE ($1 = '' OR pr.run_number ILIKE $2 OR pr.status ILIKE $2 OR CAST(pr.run_date AS TEXT) ILIKE $2)`,
+      q, `%${q}%`
+    )
+    const total = countRows[0]?.total ?? 0
+
+    const rows = await prisma.$queryRawUnsafe<any[]>(
       `SELECT pr.*, e.full_name as created_by_name
        FROM "${entitySchema}".payroll_run pr
        LEFT JOIN public.user_account e ON e.id = pr.created_by
-       ORDER BY pr.run_date DESC`
+       WHERE ($1 = '' OR pr.run_number ILIKE $2 OR pr.status ILIKE $2 OR CAST(pr.run_date AS TEXT) ILIKE $2)
+       ORDER BY pr.run_date DESC
+       LIMIT $3 OFFSET $4`,
+      q, `%${q}%`, limit, offset
     )
+
+    return { rows, total }
   },
 
   async getPayRun(entitySchema: string, payRunId: string) {

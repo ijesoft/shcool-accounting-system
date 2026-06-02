@@ -5,14 +5,31 @@ import { auditLog } from "@/lib/audit/audit-log"
 import { depreciationEngine } from "@/lib/accounting/depreciation-engine"
 
 export const fixedAssetService = {
-  async list(entitySchema: string) {
-    return prisma.$queryRawUnsafe<any[]>(
+  async list(entitySchema: string, opts?: { q?: string; page?: number; limit?: number }) {
+    const q = opts?.q ?? ""
+    const limit = opts?.limit ?? 20
+    const page = opts?.page ?? 1
+    const offset = (page - 1) * limit
+
+    const countRows = await prisma.$queryRawUnsafe<{ total: number }[]>(
+      `SELECT COUNT(*)::int as total
+       FROM "${entitySchema}".fixed_asset fa
+       WHERE ($1 = '' OR fa.asset_code ILIKE $2 OR fa.asset_name ILIKE $2 OR fa.asset_category ILIKE $2 OR fa.status ILIKE $2)`,
+      q, `%${q}%`
+    )
+    const total = countRows[0]?.total ?? 0
+
+    const rows = await prisma.$queryRawUnsafe<any[]>(
       `SELECT *,
         (acquisition_cost - accumulated_depreciation) as net_book_value
-       FROM "${entitySchema}".fixed_asset
-       ORDER BY acquisition_date DESC
-       LIMIT 100`
+       FROM "${entitySchema}".fixed_asset fa
+       WHERE ($1 = '' OR fa.asset_code ILIKE $2 OR fa.asset_name ILIKE $2 OR fa.asset_category ILIKE $2 OR fa.status ILIKE $2)
+       ORDER BY fa.acquisition_date DESC
+       LIMIT $3 OFFSET $4`,
+      q, `%${q}%`, limit, offset
     )
+
+    return { rows, total }
   },
 
   async getById(entitySchema: string, id: string) {

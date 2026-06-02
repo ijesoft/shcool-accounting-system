@@ -3,10 +3,18 @@ import { getSession } from "@/lib/auth/session"
 import { hasPermission } from "@/lib/auth/rbac"
 import { redirect } from "next/navigation"
 import { prisma } from "@/lib/db"
+import { officialReceiptService } from "@/services/official-receipt.service"
+import { SearchPagination } from "@/components/ui/search-pagination"
 
 export const dynamic = "force-dynamic"
 
-export default async function OfficialReceiptsPage() {
+const PAGE_SIZE = 20
+
+export default async function OfficialReceiptsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; page?: string }>
+}) {
   const session = await getSession()
   if (!session.userId) redirect("/login")
   if (!hasPermission(session.roleName, "official_receipts", "read")) redirect("/")
@@ -15,17 +23,25 @@ export default async function OfficialReceiptsPage() {
   const entity = await prisma.entity.findUnique({ where: { id: session.entityId } })
   if (!entity) return <p className="p-6 text-muted-foreground">Entity not found.</p>
 
-  const rows = await prisma.$queryRawUnsafe<any[]>(
-    `SELECT or_.*, pt.transaction_number as payment_ref
-     FROM "${entity.schemaName}".official_receipt or_
-     LEFT JOIN "${entity.schemaName}".payment_transaction pt ON pt.id = or_.cash_receipt_id
-     ORDER BY or_.created_at DESC LIMIT 100`
-  )
+  const sp = await searchParams
+  const q = sp.q ?? ""
+  const page = Number(sp.page) || 1
+
+  const { rows, total } = await officialReceiptService.list(entity.schemaName, { q, page, limit: PAGE_SIZE })
 
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">Official Receipts</h1>
       <div className="rounded-lg border bg-card">
+        <div className="px-4">
+          <SearchPagination
+            totalCount={total}
+            currentPage={page}
+            pageSize={PAGE_SIZE}
+            searchValue={q}
+            placeholder="Search by OR no., payor, status…"
+          />
+        </div>
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b bg-muted/50">

@@ -4,21 +4,41 @@ import { hasPermission } from "@/lib/auth/rbac"
 import { redirect } from "next/navigation"
 import { prisma } from "@/lib/db"
 import { Button } from "@/components/ui/button"
+import { SearchPagination } from "@/components/ui/search-pagination"
 
-async function getEntries(entityId: string) {
+export const dynamic = "force-dynamic"
+
+const PAGE_SIZE = 20
+
+async function getEntries(entityId: string, opts: { q: string; page: number }) {
   const entity = await prisma.entity.findUnique({ where: { id: entityId } })
-  if (!entity) return { entries: [], entityName: "" }
+  if (!entity) return { entries: [], entityName: "", total: 0 }
+
+  const q = opts.q
+  const limit = PAGE_SIZE
+  const offset = (opts.page - 1) * limit
+
+  const countRows = await prisma.$queryRawUnsafe<{ total: number }[]>(
+    `SELECT COUNT(*)::int as total
+     FROM "${entity.schemaName}".journal_entry je
+     WHERE ($1 = '' OR je.entry_number ILIKE $2 OR COALESCE(je.description,'') ILIKE $2 OR je.status ILIKE $2 OR COALESCE(je.source_module,'') ILIKE $2)`,
+    q, `%${q}%`
+  )
+  const total = countRows[0]?.total ?? 0
 
   const entries = await prisma.$queryRawUnsafe<any[]>(
-    `SELECT je.*, 
+    `SELECT je.*,
       (SELECT COUNT(*) FROM "${entity.schemaName}".journal_entry_line WHERE journal_entry_id = je.id) as line_count,
       (SELECT COALESCE(SUM(debit), 0) FROM "${entity.schemaName}".journal_entry_line WHERE journal_entry_id = je.id) as total_debit,
       (SELECT COALESCE(SUM(credit), 0) FROM "${entity.schemaName}".journal_entry_line WHERE journal_entry_id = je.id) as total_credit
-     FROM "${entity.schemaName}".journal_entry je 
-     ORDER BY je.created_at DESC LIMIT 100`
+     FROM "${entity.schemaName}".journal_entry je
+     WHERE ($1 = '' OR je.entry_number ILIKE $2 OR COALESCE(je.description,'') ILIKE $2 OR je.status ILIKE $2 OR COALESCE(je.source_module,'') ILIKE $2)
+     ORDER BY je.created_at DESC
+     LIMIT $3 OFFSET $4`,
+    q, `%${q}%`, limit, offset
   )
 
-  return { entries, entityName: entity.name }
+  return { entries, entityName: entity.name, total }
 }
 
 const statusColors: Record<string, string> = {
@@ -27,7 +47,11 @@ const statusColors: Record<string, string> = {
   void: "bg-red-100 text-red-800",
 }
 
-export default async function JournalEntriesPage() {
+export default async function JournalEntriesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; page?: string }>
+}) {
   const session = await getSession()
   if (!session.userId) redirect("/login")
   if (!hasPermission(session.roleName, "journal_entries", "read")) redirect("/")
@@ -41,7 +65,11 @@ export default async function JournalEntriesPage() {
     )
   }
 
-  const { entries, entityName } = await getEntries(session.entityId)
+  const sp = await searchParams
+  const q = sp.q ?? ""
+  const page = Number(sp.page) || 1
+
+  const { entries, entityName, total } = await getEntries(session.entityId, { q, page })
 
   return (
     <div className="space-y-6">
@@ -56,6 +84,15 @@ export default async function JournalEntriesPage() {
       </div>
 
       <div className="rounded-lg border bg-card">
+        <div className="px-4">
+          <SearchPagination
+            totalCount={total}
+            currentPage={page}
+            pageSize={PAGE_SIZE}
+            searchValue={q}
+            placeholder="Search by entry no., description, status…"
+          />
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>

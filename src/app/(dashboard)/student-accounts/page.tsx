@@ -4,10 +4,17 @@ import { hasPermission } from "@/lib/auth/rbac"
 import { redirect } from "next/navigation"
 import { studentAccountService } from "@/services/student-account.service"
 import { prisma } from "@/lib/db"
+import { SearchPagination } from "@/components/ui/search-pagination"
 
 export const dynamic = "force-dynamic"
 
-export default async function StudentAccountsPage() {
+const PAGE_SIZE = 20
+
+export default async function StudentAccountsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; page?: string }>
+}) {
   const session = await getSession()
   if (!session.userId) redirect("/login")
   if (!hasPermission(session.roleName, "student_accounts", "read")) redirect("/")
@@ -16,12 +23,25 @@ export default async function StudentAccountsPage() {
   const entity = await prisma.entity.findUnique({ where: { id: session.entityId } })
   if (!entity) return <p className="p-6 text-muted-foreground">Entity not found.</p>
 
-  const students = await studentAccountService.list(entity.schemaName)
+  const sp = await searchParams
+  const q = sp.q ?? ""
+  const page = Number(sp.page) || 1
+
+  const { rows: students, total } = await studentAccountService.list(entity.schemaName, { q, page, limit: PAGE_SIZE })
 
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">Student Accounts</h1>
       <div className="rounded-lg border bg-card">
+        <div className="px-4">
+          <SearchPagination
+            totalCount={total}
+            currentPage={page}
+            pageSize={PAGE_SIZE}
+            searchValue={q}
+            placeholder="Search by name, student no., course…"
+          />
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>

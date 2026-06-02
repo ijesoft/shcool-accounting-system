@@ -5,10 +5,17 @@ import { redirect } from "next/navigation"
 import { fixedAssetService } from "@/services/fixed-asset.service"
 import { prisma } from "@/lib/db"
 import { Button } from "@/components/ui/button"
+import { SearchPagination } from "@/components/ui/search-pagination"
 
 export const dynamic = "force-dynamic"
 
-export default async function FixedAssetsPage() {
+const PAGE_SIZE = 20
+
+export default async function FixedAssetsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; page?: string }>
+}) {
   const session = await getSession()
   if (!session.userId) redirect("/login")
   if (!hasPermission(session.roleName, "fixed_assets", "read")) redirect("/")
@@ -17,7 +24,11 @@ export default async function FixedAssetsPage() {
   const entity = await prisma.entity.findUnique({ where: { id: session.entityId } })
   if (!entity) return <p className="p-6 text-muted-foreground">Entity not found.</p>
 
-  const assets = await fixedAssetService.list(entity.schemaName)
+  const sp = await searchParams
+  const q = sp.q ?? ""
+  const page = Number(sp.page) || 1
+
+  const { rows: assets, total } = await fixedAssetService.list(entity.schemaName, { q, page, limit: PAGE_SIZE })
 
   return (
     <div className="space-y-6">
@@ -26,6 +37,15 @@ export default async function FixedAssetsPage() {
         <Link href="/fixed-assets/new"><Button>Capitalize Asset</Button></Link>
       </div>
       <div className="rounded-lg border bg-card">
+        <div className="px-4">
+          <SearchPagination
+            totalCount={total}
+            currentPage={page}
+            pageSize={PAGE_SIZE}
+            searchValue={q}
+            placeholder="Search by code, name, category, status…"
+          />
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>

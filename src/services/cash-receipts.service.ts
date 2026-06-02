@@ -6,15 +6,32 @@ import { getBirSettings, isVatRegistered } from "@/lib/entity-settings"
 import { vatEngine } from "@/lib/accounting/vat-engine"
 
 export const cashReceiptsService = {
-  async list(entitySchema: string) {
-    return prisma.$queryRawUnsafe<any[]>(
+  async list(entitySchema: string, opts?: { q?: string; page?: number; limit?: number }) {
+    const q = opts?.q ?? ""
+    const limit = opts?.limit ?? 20
+    const page = opts?.page ?? 1
+    const offset = (page - 1) * limit
+
+    const countRows = await prisma.$queryRawUnsafe<{ total: number }[]>(
+      `SELECT COUNT(*)::int as total
+       FROM "${entitySchema}".payment_transaction pt
+       WHERE ($1 = '' OR pt.transaction_number ILIKE $2 OR COALESCE(pt.payor_name,'') ILIKE $2 OR pt.payment_method ILIKE $2 OR CAST(pt.amount AS TEXT) ILIKE $2)`,
+      q, `%${q}%`
+    )
+    const total = countRows[0]?.total ?? 0
+
+    const rows = await prisma.$queryRawUnsafe<any[]>(
       `SELECT pt.*, s.full_name as student_name, si.invoice_number
        FROM "${entitySchema}".payment_transaction pt
        LEFT JOIN "${entitySchema}".student s ON s.id = pt.student_id
        LEFT JOIN "${entitySchema}".student_invoice si ON si.id = pt.invoice_id
+       WHERE ($1 = '' OR pt.transaction_number ILIKE $2 OR COALESCE(pt.payor_name,'') ILIKE $2 OR pt.payment_method ILIKE $2 OR CAST(pt.amount AS TEXT) ILIKE $2)
        ORDER BY pt.payment_date DESC
-       LIMIT 100`
+       LIMIT $3 OFFSET $4`,
+      q, `%${q}%`, limit, offset
     )
+
+    return { rows, total }
   },
 
   async getById(entitySchema: string, id: string) {

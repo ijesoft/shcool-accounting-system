@@ -5,24 +5,12 @@ import { redirect } from "next/navigation"
 import { prisma } from "@/lib/db"
 import { Button } from "@/components/ui/button"
 import { maskSalary, formatCurrency } from "@/lib/utils/mask"
+import { payrollService } from "@/services/payroll.service"
+import { SearchPagination } from "@/components/ui/search-pagination"
 
-async function getPayrollData(entityId: string) {
-  const entity = await prisma.entity.findUnique({ where: { id: entityId } })
-  if (!entity) return { employees: [], payRuns: [], entityName: "" }
+export const dynamic = "force-dynamic"
 
-  const employees = await prisma.$queryRawUnsafe<any[]>(
-    `SELECT * FROM "${entity.schemaName}".employee ORDER BY full_name`
-  )
-
-  const payRuns = await prisma.$queryRawUnsafe<any[]>(
-    `SELECT pr.*, e.full_name as created_by_name
-     FROM "${entity.schemaName}".payroll_run pr
-     LEFT JOIN public.user_account e ON e.id = pr.created_by
-     ORDER BY pr.run_date DESC LIMIT 50`
-  )
-
-  return { employees, payRuns, entityName: entity.name }
-}
+const PAGE_SIZE = 20
 
 const statusColors: Record<string, string> = {
   draft: "bg-yellow-100 text-yellow-800",
@@ -30,7 +18,11 @@ const statusColors: Record<string, string> = {
   void: "bg-red-100 text-red-800",
 }
 
-export default async function PayrollPage() {
+export default async function PayrollPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q_emp?: string; page_emp?: string; q_run?: string; page_run?: string }>
+}) {
   const session = await getSession()
   if (!session.userId) redirect("/login")
 
@@ -43,7 +35,20 @@ export default async function PayrollPage() {
     )
   }
 
-  const { employees, payRuns, entityName } = await getPayrollData(session.entityId)
+  const entity = await prisma.entity.findUnique({ where: { id: session.entityId } })
+  if (!entity) return <p className="p-6 text-muted-foreground">Entity not found.</p>
+
+  const sp = await searchParams
+  const qEmp = sp.q_emp ?? ""
+  const pageEmp = Number(sp.page_emp) || 1
+  const qRun = sp.q_run ?? ""
+  const pageRun = Number(sp.page_run) || 1
+
+  const [{ rows: employees, total: totalEmp }, { rows: payRuns, total: totalRuns }] = await Promise.all([
+    payrollService.listEmployees(entity.schemaName, { q: qEmp, page: pageEmp, limit: PAGE_SIZE }),
+    payrollService.listPayRuns(entity.schemaName, { q: qRun, page: pageRun, limit: PAGE_SIZE }),
+  ])
+
   const isAdmin = ["super_admin", "admin", "finance_manager"].includes(session.roleName)
 
   return (
@@ -51,7 +56,7 @@ export default async function PayrollPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Payroll</h1>
-          <p className="text-sm text-muted-foreground">{entityName}</p>
+          <p className="text-sm text-muted-foreground">{entity.name}</p>
         </div>
         <div className="flex gap-2">
           <Link href="/payroll/employees/new">
@@ -66,7 +71,18 @@ export default async function PayrollPage() {
       {/* Employees */}
       <div className="rounded-lg border bg-card">
         <div className="p-4 border-b">
-          <h2 className="text-lg font-semibold">Employees ({employees.length})</h2>
+          <h2 className="text-lg font-semibold">Employees ({totalEmp})</h2>
+        </div>
+        <div className="px-4">
+          <SearchPagination
+            totalCount={totalEmp}
+            currentPage={pageEmp}
+            pageSize={PAGE_SIZE}
+            searchValue={qEmp}
+            placeholder="Search employees…"
+            qParam="q_emp"
+            pageParam="page_emp"
+          />
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -118,6 +134,17 @@ export default async function PayrollPage() {
         <div className="p-4 border-b">
           <h2 className="text-lg font-semibold">Pay Runs</h2>
         </div>
+        <div className="px-4">
+          <SearchPagination
+            totalCount={totalRuns}
+            currentPage={pageRun}
+            pageSize={PAGE_SIZE}
+            searchValue={qRun}
+            placeholder="Search payroll runs…"
+            qParam="q_run"
+            pageParam="page_run"
+          />
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -161,15 +188,15 @@ export default async function PayrollPage() {
                     {Number(run.total_net_pay).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
                   </td>
                   <td className="p-3 text-center">
+                    <span className={`inline-block px-2 py-1 rounded-full text-xs ${statusColors[run.status] || ""}`}>
+                      {run.status}
+                    </span>
+                  </td>
+                  <td className="p-3 text-center">
                     <div className="flex gap-1 justify-center">
                       <a href={`/api/v1/payroll-runs/${run.id}/register?format=csv`} className="text-blue-600 hover:underline text-xs">CSV</a>
                       <a href={`/api/v1/payroll-runs/${run.id}/register?format=xlsx`} className="text-blue-600 hover:underline text-xs">XLS</a>
                     </div>
-                  </td>
-                  <td className="p-3 text-center">
-                    <span className={`inline-block px-2 py-1 rounded-full text-xs ${statusColors[run.status] || ""}`}>
-                      {run.status}
-                    </span>
                   </td>
                 </tr>
               ))}

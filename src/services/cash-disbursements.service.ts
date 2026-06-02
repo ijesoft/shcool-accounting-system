@@ -5,10 +5,29 @@ import { auditLog } from "@/lib/audit/audit-log"
 import { getBirSettings } from "@/lib/entity-settings"
 
 export const cashDisbursementsService = {
-  async list(entitySchema: string) {
-    return prisma.$queryRawUnsafe<any[]>(
-      `SELECT * FROM "${entitySchema}".disbursement ORDER BY cv_date DESC LIMIT 100`
+  async list(entitySchema: string, opts?: { q?: string; page?: number; limit?: number }) {
+    const q = opts?.q ?? ""
+    const limit = opts?.limit ?? 20
+    const page = opts?.page ?? 1
+    const offset = (page - 1) * limit
+
+    const countRows = await prisma.$queryRawUnsafe<{ total: number }[]>(
+      `SELECT COUNT(*)::int as total
+       FROM "${entitySchema}".disbursement d
+       WHERE ($1 = '' OR d.cv_number ILIKE $2 OR d.payee_name ILIKE $2 OR COALESCE(d.tin,'') ILIKE $2 OR COALESCE(d.status,'') ILIKE $2 OR d.payment_method ILIKE $2)`,
+      q, `%${q}%`
     )
+    const total = countRows[0]?.total ?? 0
+
+    const rows = await prisma.$queryRawUnsafe<any[]>(
+      `SELECT * FROM "${entitySchema}".disbursement d
+       WHERE ($1 = '' OR d.cv_number ILIKE $2 OR d.payee_name ILIKE $2 OR COALESCE(d.tin,'') ILIKE $2 OR COALESCE(d.status,'') ILIKE $2 OR d.payment_method ILIKE $2)
+       ORDER BY d.cv_date DESC
+       LIMIT $3 OFFSET $4`,
+      q, `%${q}%`, limit, offset
+    )
+
+    return { rows, total }
   },
 
   async getById(entitySchema: string, id: string) {

@@ -2,13 +2,31 @@ import { prisma } from "@/lib/db"
 import { billingEngine } from "@/lib/accounting/billing-engine"
 
 export const studentAccountService = {
-  async list(entitySchema: string) {
-    return prisma.$queryRawUnsafe<any[]>(
-      `SELECT s.*, 
+  async list(entitySchema: string, opts?: { q?: string; page?: number; limit?: number }) {
+    const q = opts?.q ?? ""
+    const limit = opts?.limit ?? 20
+    const page = opts?.page ?? 1
+    const offset = (page - 1) * limit
+
+    const countRows = await prisma.$queryRawUnsafe<{ total: number }[]>(
+      `SELECT COUNT(*)::int as total
+       FROM "${entitySchema}".student s
+       WHERE ($1 = '' OR s.full_name ILIKE $2 OR s.student_number ILIKE $2 OR COALESCE(s.course,'') ILIKE $2 OR COALESCE(s.grade_level,'') ILIKE $2)`,
+      q, `%${q}%`
+    )
+    const total = countRows[0]?.total ?? 0
+
+    const rows = await prisma.$queryRawUnsafe<any[]>(
+      `SELECT s.*,
         COALESCE((SELECT SUM(balance) FROM "${entitySchema}".student_invoice WHERE student_id = s.id AND status IN ('unpaid','partial')), 0) as total_balance
        FROM "${entitySchema}".student s
-       ORDER BY s.full_name`
+       WHERE ($1 = '' OR s.full_name ILIKE $2 OR s.student_number ILIKE $2 OR COALESCE(s.course,'') ILIKE $2 OR COALESCE(s.grade_level,'') ILIKE $2)
+       ORDER BY s.full_name
+       LIMIT $3 OFFSET $4`,
+      q, `%${q}%`, limit, offset
     )
+
+    return { rows, total }
   },
 
   async getById(entitySchema: string, id: string) {
@@ -43,7 +61,7 @@ export const studentAccountService = {
 
   async getInvoices(entitySchema: string, studentId: string) {
     return prisma.$queryRawUnsafe<any[]>(
-      `SELECT si.*, 
+      `SELECT si.*,
         (SELECT COALESCE(JSON_AGG(json_build_object('fee_type', sil.fee_type, 'amount', sil.amount, 'discount_type', sil.discount_type, 'discount_amount', sil.discount_amount)), '[]'::json)
          FROM "${entitySchema}".student_invoice_line sil WHERE sil.invoice_id = si.id) as lines
        FROM "${entitySchema}".student_invoice si
