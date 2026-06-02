@@ -530,16 +530,21 @@ export async function createEntitySchema(schemaName: string): Promise<void> {
       ('52200', 'Insurance Expense', 'expense', 'debit', 3),
       ('52300', 'Repairs & Maintenance', 'expense', 'debit', 3),
       ('52400', 'Interest Expense', 'expense', 'debit', 3),
-      ('52500', 'Training & Development', 'expense', 'debit', 3);
+      ('52500', 'Training & Development', 'expense', 'debit', 3)
+    ON CONFLICT (account_code) DO NOTHING;
 
-    INSERT INTO "${schemaName}".number_series (series_type, prefix, starting_number, next_number) VALUES
-      ('JE', 'JE', 1, 1),
-      ('OR', 'OR', 1, 1),
-      ('CV', 'CV', 1, 1),
-      ('CD', 'CD', 1, 1),
-      ('PMT', 'PMT', 1, 1),
-      ('INVOICE', 'INV', 1, 1),
-      ('PR', 'PR', 1, 1);
+    INSERT INTO "${schemaName}".number_series (series_type, prefix, starting_number, next_number)
+    SELECT v.series_type, v.prefix, v.starting_number, v.next_number
+    FROM (VALUES
+      ('JE'::VARCHAR, 'JE', 1, 1),
+      ('OR'::VARCHAR, 'OR', 1, 1),
+      ('CV'::VARCHAR, 'CV', 1, 1),
+      ('CD'::VARCHAR, 'CD', 1, 1),
+      ('PMT'::VARCHAR, 'PMT', 1, 1),
+      ('INVOICE'::VARCHAR, 'INV', 1, 1),
+      ('PR'::VARCHAR, 'PR', 1, 1)
+    ) AS v(series_type, prefix, starting_number, next_number)
+    WHERE NOT EXISTS (SELECT 1 FROM "${schemaName}".number_series WHERE fiscal_year_id IS NULL);
   `
 
   for (const stmt of sql.split(";")) {

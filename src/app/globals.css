@@ -35,3 +35,20 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer base {
+  :root {
+    --primary: 220 70% 25%;
+    --primary-foreground: 0 0% 100%;
+    --accent: 44 85% 48%;
+    --accent-foreground: 220 70% 15%;
+  }
+}
+
+@media print {
+  nav, aside, .no-print, button, [data-print="hidden"] { display: none !important; }
+  body { background: white !important; }
+  main { padding: 0 !important; margin: 0 !important; overflow: visible !important; }
+  .print-page-break { page-break-before: always; }
+  @page { size: letter; margin: 1in; }
+}

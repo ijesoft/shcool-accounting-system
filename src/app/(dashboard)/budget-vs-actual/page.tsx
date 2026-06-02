@@ -20,7 +20,7 @@ async function getBudgetData(entityId: string) {
   return { entityName: entity.name, fiscalYears, entitySchema: entity.schemaName }
 }
 
-export default async function BudgetVsActualPage({ searchParams }: { searchParams: { fy?: string } }) {
+export default async function BudgetVsActualPage({ searchParams }: { searchParams: Promise<{ fy?: string }> }) {
   const session = await getSession()
   if (!session.userId) redirect("/login")
 
@@ -35,7 +35,8 @@ export default async function BudgetVsActualPage({ searchParams }: { searchParam
 
   const { entityName, fiscalYears, entitySchema } = await getBudgetData(session.entityId)
 
-  const fyFromParam = searchParams.fy
+  const params = await searchParams
+  const fyFromParam = params.fy
   const fyFromList = fiscalYears[0]?.id
   const fiscalYearId = fyFromParam || fyFromList
 

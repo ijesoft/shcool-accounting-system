@@ -4,6 +4,7 @@ import { hasPermission } from "@/lib/auth/rbac"
 import { redirect } from "next/navigation"
 import { prisma } from "@/lib/db"
 import { Button } from "@/components/ui/button"
+import { maskSalary, formatCurrency } from "@/lib/utils/mask"
 
 async function getPayrollData(entityId: string) {
   const entity = await prisma.entity.findUnique({ where: { id: entityId } })
@@ -43,6 +44,7 @@ export default async function PayrollPage() {
   }
 
   const { employees, payRuns, entityName } = await getPayrollData(session.entityId)
+  const isAdmin = ["super_admin", "admin", "finance_manager"].includes(session.roleName)
 
   return (
     <div className="space-y-8">
@@ -94,10 +96,10 @@ export default async function PayrollPage() {
                   <td className="p-3">{emp.position || "-"}</td>
                   <td className="p-3">{emp.department || "-"}</td>
                   <td className="p-3 text-right">
-                    {Number(emp.basic_pay).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+                    {isAdmin ? formatCurrency(Number(emp.basic_pay)) : maskSalary(Number(emp.basic_pay))}
                   </td>
                   <td className="p-3 text-right">
-                    {Number(emp.allowances || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+                    {isAdmin ? formatCurrency(Number(emp.allowances || 0)) : maskSalary(Number(emp.allowances || 0))}
                   </td>
                   <td className="p-3 text-center">
                     <span className={`inline-block px-2 py-1 rounded-full text-xs ${emp.is_active ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>

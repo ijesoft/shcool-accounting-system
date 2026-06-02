@@ -1,18 +1,43 @@
 import { prisma } from "@/lib/db"
 
-interface SSSBracket {
-  minCW: number
-  maxCW: number
-  employeeShare: number
-  employerShare: number
+// ─── SSS 2024 (R.A. 11199) ───────────────────────────────────────────────────
+// MSC = clamp(round(salary / 500) * 500, 4000, 30000)
+// Employee: 4.5%, Employer: 9.5%
+// WISP (Mandatory Provident Fund): 1% each when MSC >= 20,000
+// Max employee: PHP 1,350, max employer: PHP 2,850 at MSC 30,000
+
+function computeMSC(salary: number): number {
+  const rounded = Math.round(salary / 500) * 500
+  return Math.min(Math.max(rounded, 4000), 30000)
 }
 
-interface PhilHealthBracket {
-  minCW: number
-  maxCW: number
-  rate: number
-  maxContribution: number
+function computeSSS(salary: number): { employee: number; employer: number; wisp: number } {
+  const msc = computeMSC(salary)
+  const employee = Math.min(Math.round(msc * 0.045), 1350)
+  const employer = Math.min(Math.round(msc * 0.095), 2850)
+  const wisp = msc >= 20000 ? Math.round(msc * 0.01) : 0
+  return { employee, employer, wisp }
 }
+
+// ─── PhilHealth 2025 (Circular 2024-0004) ────────────────────────────────────
+// Total 5%: 2.5% employee + 2.5% employer
+// Floor: salary < 10,000 → PHP 500 each side
+// Ceiling: salary > 100,000 → PHP 2,500 each side
+
+function computePhilHealth(salary: number): { employee: number; employer: number } {
+  let half: number
+  if (salary < 10000) {
+    half = 500
+  } else if (salary > 100000) {
+    half = 2500
+  } else {
+    half = Math.round(salary * 0.025)
+  }
+  return { employee: half, employer: half }
+}
+
+// ─── Pag-IBIG ────────────────────────────────────────────────────────────────
+// Statutory max PHP 100 per side
 
 interface PagIBIGBracket {
   minCW: number
@@ -20,117 +45,25 @@ interface PagIBIGBracket {
   rate: number
 }
 
+const PAGIBIG_TABLE: PagIBIGBracket[] = [
+  { minCW: 0, maxCW: 1499, rate: 0.01 },
+  { minCW: 1500, maxCW: 1800000, rate: 0.02 },
+]
+
+function computePagIBIG(salary: number): number {
+  const bracket = PAGIBIG_TABLE.find(b => salary >= b.minCW && salary <= b.maxCW)
+  const rate = bracket ? bracket.rate : 0.02
+  return Math.min(Math.round(salary * rate), 100)
+}
+
+// ─── Withholding Tax (TRAIN Law, 2023 tables) ─────────────────────────────────
+
 interface WHTBracket {
   minMonthly: number
   maxMonthly: number
   rate: number
   deduction: number
 }
-
-const SSS_TABLE: SSSBracket[] = [
-  { minCW: 10000, maxCW: 10249, employeeShare: 100, employerShare: 150 },
-  { minCW: 10500, maxCW: 10749, employeeShare: 113, employerShare: 158 },
-  { minCW: 11000, maxCW: 11249, employeeShare: 120, employerShare: 165 },
-  { minCW: 11500, maxCW: 11749, employeeShare: 128, employerShare: 173 },
-  { minCW: 12000, maxCW: 12249, employeeShare: 135, employerShare: 180 },
-  { minCW: 12500, maxCW: 12749, employeeShare: 143, employerShare: 188 },
-  { minCW: 13000, maxCW: 13249, employeeShare: 150, employerShare: 195 },
-  { minCW: 13500, maxCW: 13749, employeeShare: 158, employerShare: 203 },
-  { minCW: 14000, maxCW: 14249, employeeShare: 165, employerShare: 210 },
-  { minCW: 14500, maxCW: 14749, employeeShare: 173, employerShare: 218 },
-  { minCW: 15000, maxCW: 15249, employeeShare: 180, employerShare: 225 },
-  { minCW: 15500, maxCW: 15749, employeeShare: 188, employerShare: 233 },
-  { minCW: 16000, maxCW: 16249, employeeShare: 195, employerShare: 240 },
-  { minCW: 16500, maxCW: 16749, employeeShare: 203, employerShare: 248 },
-  { minCW: 17000, maxCW: 17249, employeeShare: 210, employerShare: 255 },
-  { minCW: 17500, maxCW: 17749, employeeShare: 218, employerShare: 263 },
-  { minCW: 18000, maxCW: 18249, employeeShare: 225, employerShare: 270 },
-  { minCW: 18500, maxCW: 18749, employeeShare: 233, employerShare: 278 },
-  { minCW: 19000, maxCW: 19249, employeeShare: 240, employerShare: 285 },
-  { minCW: 19500, maxCW: 19749, employeeShare: 248, employerShare: 293 },
-  { minCW: 20000, maxCW: 20249, employeeShare: 255, employerShare: 300 },
-  { minCW: 20500, maxCW: 20749, employeeShare: 263, employerShare: 308 },
-  { minCW: 21000, maxCW: 21249, employeeShare: 270, employerShare: 315 },
-  { minCW: 21500, maxCW: 21749, employeeShare: 278, employerShare: 323 },
-  { minCW: 22000, maxCW: 22249, employeeShare: 285, employerShare: 330 },
-  { minCW: 22500, maxCW: 22749, employeeShare: 293, employerShare: 338 },
-  { minCW: 23000, maxCW: 23249, employeeShare: 300, employerShare: 345 },
-  { minCW: 23500, maxCW: 23749, employeeShare: 308, employerShare: 353 },
-  { minCW: 24000, maxCW: 24249, employeeShare: 315, employerShare: 360 },
-  { minCW: 24500, maxCW: 24749, employeeShare: 323, employerShare: 368 },
-  { minCW: 25000, maxCW: 25249, employeeShare: 330, employerShare: 375 },
-  { minCW: 25500, maxCW: 25749, employeeShare: 338, employerShare: 383 },
-  { minCW: 26000, maxCW: 26249, employeeShare: 345, employerShare: 390 },
-  { minCW: 26500, maxCW: 26749, employeeShare: 353, employerShare: 398 },
-  { minCW: 27000, maxCW: 27249, employeeShare: 360, employerShare: 405 },
-  { minCW: 27500, maxCW: 27749, employeeShare: 368, employerShare: 413 },
-  { minCW: 28000, maxCW: 28249, employeeShare: 375, employerShare: 420 },
-  { minCW: 28500, maxCW: 28749, employeeShare: 383, employerShare: 428 },
-  { minCW: 29000, maxCW: 29249, employeeShare: 390, employerShare: 435 },
-  { minCW: 29500, maxCW: 29749, employeeShare: 398, employerShare: 443 },
-  { minCW: 30000, maxCW: 30249, employeeShare: 405, employerShare: 450 },
-  { minCW: 30500, maxCW: 30749, employeeShare: 413, employerShare: 458 },
-  { minCW: 31000, maxCW: 31249, employeeShare: 420, employerShare: 465 },
-  { minCW: 31500, maxCW: 31749, employeeShare: 428, employerShare: 473 },
-  { minCW: 32000, maxCW: 32249, employeeShare: 435, employerShare: 480 },
-  { minCW: 32500, maxCW: 32749, employeeShare: 443, employerShare: 488 },
-  { minCW: 33000, maxCW: 33249, employeeShare: 450, employerShare: 495 },
-  { minCW: 33500, maxCW: 33749, employeeShare: 458, employerShare: 503 },
-  { minCW: 34000, maxCW: 34249, employeeShare: 465, employerShare: 510 },
-  { minCW: 34500, maxCW: 34749, employeeShare: 473, employerShare: 518 },
-  { minCW: 35000, maxCW: 35249, employeeShare: 480, employerShare: 525 },
-  { minCW: 35500, maxCW: 35749, employeeShare: 488, employerShare: 533 },
-  { minCW: 36000, maxCW: 36249, employeeShare: 495, employerShare: 540 },
-  { minCW: 36500, maxCW: 36749, employeeShare: 503, employerShare: 548 },
-  { minCW: 37000, maxCW: 37249, employeeShare: 510, employerShare: 555 },
-  { minCW: 37500, maxCW: 37749, employeeShare: 518, employerShare: 563 },
-  { minCW: 38000, maxCW: 38249, employeeShare: 525, employerShare: 570 },
-  { minCW: 38500, maxCW: 38749, employeeShare: 533, employerShare: 578 },
-  { minCW: 39000, maxCW: 39249, employeeShare: 540, employerShare: 585 },
-  { minCW: 39500, maxCW: 39749, employeeShare: 548, employerShare: 593 },
-  { minCW: 40000, maxCW: 50000, employeeShare: 555, employerShare: 600 },
-  { minCW: 50001, maxCW: 1800000, employeeShare: 555, employerShare: 600 },
-]
-
-const PHILHEALTH_TABLE: PhilHealthBracket[] = [
-  { minCW: 10000, maxCW: 10999, rate: 0.04, maxContribution: 440 },
-  { minCW: 11000, maxCW: 11999, rate: 0.04, maxContribution: 480 },
-  { minCW: 12000, maxCW: 12999, rate: 0.04, maxContribution: 520 },
-  { minCW: 13000, maxCW: 13999, rate: 0.04, maxContribution: 560 },
-  { minCW: 14000, maxCW: 14999, rate: 0.04, maxContribution: 600 },
-  { minCW: 15000, maxCW: 15999, rate: 0.04, maxContribution: 640 },
-  { minCW: 16000, maxCW: 16999, rate: 0.04, maxContribution: 680 },
-  { minCW: 17000, maxCW: 17999, rate: 0.04, maxContribution: 720 },
-  { minCW: 18000, maxCW: 18999, rate: 0.04, maxContribution: 760 },
-  { minCW: 19000, maxCW: 19999, rate: 0.04, maxContribution: 800 },
-  { minCW: 20000, maxCW: 20999, rate: 0.04, maxContribution: 840 },
-  { minCW: 21000, maxCW: 21999, rate: 0.04, maxContribution: 880 },
-  { minCW: 22000, maxCW: 22999, rate: 0.04, maxContribution: 920 },
-  { minCW: 23000, maxCW: 23999, rate: 0.04, maxContribution: 960 },
-  { minCW: 24000, maxCW: 24999, rate: 0.04, maxContribution: 1000 },
-  { minCW: 25000, maxCW: 25999, rate: 0.04, maxContribution: 1040 },
-  { minCW: 26000, maxCW: 26999, rate: 0.04, maxContribution: 1080 },
-  { minCW: 27000, maxCW: 27999, rate: 0.04, maxContribution: 1120 },
-  { minCW: 28000, maxCW: 28999, rate: 0.04, maxContribution: 1160 },
-  { minCW: 29000, maxCW: 29999, rate: 0.04, maxContribution: 1200 },
-  { minCW: 30000, maxCW: 30999, rate: 0.04, maxContribution: 1240 },
-  { minCW: 31000, maxCW: 31999, rate: 0.04, maxContribution: 1280 },
-  { minCW: 32000, maxCW: 32999, rate: 0.04, maxContribution: 1320 },
-  { minCW: 33000, maxCW: 33999, rate: 0.04, maxContribution: 1360 },
-  { minCW: 34000, maxCW: 34999, rate: 0.04, maxContribution: 1400 },
-  { minCW: 35000, maxCW: 35999, rate: 0.04, maxContribution: 1440 },
-  { minCW: 36000, maxCW: 36999, rate: 0.04, maxContribution: 1480 },
-  { minCW: 37000, maxCW: 37999, rate: 0.04, maxContribution: 1520 },
-  { minCW: 38000, maxCW: 38999, rate: 0.04, maxContribution: 1560 },
-  { minCW: 39000, maxCW: 39999, rate: 0.04, maxContribution: 1600 },
-  { minCW: 40000, maxCW: 1800000, rate: 0.04, maxContribution: 1600 },
-]
-
-const PAGIBIG_TABLE: PagIBIGBracket[] = [
-  { minCW: 10000, maxCW: 18999, rate: 0.01 },
-  { minCW: 19000, maxCW: 22999, rate: 0.02 },
-  { minCW: 23000, maxCW: 1800000, rate: 0.02 },
-]
 
 const WHT_TABLE: WHTBracket[] = [
   { minMonthly: 0, maxMonthly: 25000, rate: 0, deduction: 0 },
@@ -142,45 +75,98 @@ const WHT_TABLE: WHTBracket[] = [
   { minMonthly: 833001, maxMonthly: 8333333, rate: 0.375, deduction: 156125 },
 ]
 
-function findSSS(contributionWage: number): { employee: number; employer: number } {
-  const bracket = SSS_TABLE.find(b => contributionWage >= b.minCW && contributionWage <= b.maxCW)
-  if (!bracket) {
-    const closest = SSS_TABLE.reduce((best, b) =>
-      Math.abs(contributionWage - b.minCW) < Math.abs(contributionWage - best.minCW) ? b : best
-    )
-    return { employee: closest.employeeShare, employer: closest.employerShare }
-  }
-  return { employee: bracket.employeeShare, employer: bracket.employerShare }
-}
-
-function findPhilHealth(contributionWage: number): number {
-  const bracket = PHILHEALTH_TABLE.find(b => contributionWage >= b.minCW && contributionWage <= b.maxCW)
-  if (!bracket) {
-    const closest = PHILHEALTH_TABLE.reduce((best, b) =>
-      Math.abs(contributionWage - b.minCW) < Math.abs(contributionWage - best.minCW) ? b : best
-    )
-    return Math.min(contributionWage * closest.rate, closest.maxContribution)
-  }
-  return Math.min(contributionWage * bracket.rate, bracket.maxContribution)
-}
-
-function findPagIBIG(contributionWage: number): number {
-  const bracket = PAGIBIG_TABLE.find(b => contributionWage >= b.minCW && contributionWage <= b.maxCW)
-  if (!bracket) {
-    const closest = PAGIBIG_TABLE.reduce((best, b) =>
-      Math.abs(contributionWage - b.minCW) < Math.abs(contributionWage - best.minCW) ? b : best
-    )
-    return contributionWage * closest.rate
-  }
-  return contributionWage * bracket.rate
-}
-
-function findWHT(monthlyGross: number): number {
-  const bracket = WHT_TABLE.find(b => monthlyGross >= b.minMonthly && monthlyGross <= b.maxMonthly)
+function findWHT(monthlyTaxable: number): number {
+  const bracket = WHT_TABLE.find(b => monthlyTaxable >= b.minMonthly && monthlyTaxable <= b.maxMonthly)
   if (!bracket) return 0
-  const tax = monthlyGross * bracket.rate - bracket.deduction
+  const tax = monthlyTaxable * bracket.rate - bracket.deduction
   return Math.max(0, Math.round(tax))
 }
+
+// ─── De Minimis Benefits ─────────────────────────────────────────────────────
+
+export interface DeMinimisBenefits {
+  riceSubsidy?: number
+  clothingAllowance?: number
+  laundryAllowance?: number
+  medicalCashAllowance?: number
+  christmasGift?: number
+  achievementAwards?: number
+}
+
+export const DE_MINIMIS_LIMITS = {
+  riceSubsidyMonthly: 2000,
+  clothingAllowanceAnnual: 6000,
+  laundryAllowanceMonthly: 300,
+  medicalCashAllowanceAnnual: 10000,
+  christmasGiftAnnual: 5000,
+  achievementAwardsAnnual: 10000,
+}
+
+export const THIRTEENTH_MONTH_EXEMPT_CEILING = 90000
+
+// ─── Holiday and Overtime helpers ────────────────────────────────────────────
+
+/**
+ * Compute holiday pay per Labor Code Art. 94 and DOLE rules.
+ * Regular holiday worked: 200% (dailyRate * 2)
+ * Regular holiday not worked: 100% (dailyRate * 1) — paid leave
+ * Special non-working worked: 130% (dailyRate * 1.3)
+ * Special non-working not worked: 0 (no work no pay)
+ */
+export function computeHolidayPay(
+  dailyRate: number,
+  holidayType: "regular" | "special",
+  worked: boolean
+): number {
+  if (holidayType === "regular") {
+    return worked ? dailyRate * 2 : dailyRate * 1
+  }
+  // special non-working
+  return worked ? dailyRate * 1.3 : 0
+}
+
+/**
+ * Compute overtime pay.
+ * Regular OT: hourlyRate * 1.25 * hours
+ * Rest day OT: hourlyRate * 1.30 * hours
+ * Holiday OT: hourlyRate * 1.30 * hours (same as rest day premium for holidays)
+ * Night diff additional: +10% of hourly rate per hour
+ */
+export function computeOvertimePay(
+  hourlyRate: number,
+  overtimeHours: number,
+  dayType: "regular" | "restday" | "holiday",
+  isNightDiff: boolean = false
+): number {
+  let multiplier: number
+  if (dayType === "regular") {
+    multiplier = 1.25
+  } else {
+    // restday or holiday
+    multiplier = 1.30
+  }
+  const base = hourlyRate * multiplier * overtimeHours
+  const nightAdd = isNightDiff ? hourlyRate * 0.10 * overtimeHours : 0
+  return Math.round((base + nightAdd) * 100) / 100
+}
+
+/**
+ * Night differential: 10% of hourly rate for hours worked between 10pm-6am.
+ */
+export function computeNightDifferential(hourlyRate: number, nightHours: number): number {
+  return Math.round(hourlyRate * 0.10 * nightHours * 100) / 100
+}
+
+/**
+ * Service Incentive Leave monetization (Labor Code Art. 95).
+ * Capped at 5 days/year.
+ */
+export function computeSILMonetization(dailyRate: number, unusedLeaveDays: number): number {
+  const cappedDays = Math.min(unusedLeaveDays, 5)
+  return Math.round(dailyRate * cappedDays * 100) / 100
+}
+
+// ─── PayrollLineCalc interface ────────────────────────────────────────────────
 
 export interface PayrollLineCalc {
   basicPay: number
@@ -188,6 +174,7 @@ export interface PayrollLineCalc {
   grossPay: number
   sssEmployee: number
   sssEmployer: number
+  sssWisp: number
   philhealthEmployee: number
   philhealthEmployer: number
   pagibigEmployee: number
@@ -196,17 +183,54 @@ export interface PayrollLineCalc {
   totalDeductions: number
   netPay: number
   thirteenthMonthAccrual: number
+  taxableBonuses: number
+  nonTaxableBonuses: number
+  holidayPay: number
+  overtimePay: number
+  nightDifferential: number
+  silMonetization: number
 }
 
-export const payrollEngine = {
-  calculateLine(basicPay: number, allowances: number, thirteenthMonthAccrual: number = 0): PayrollLineCalc {
-    const grossPay = basicPay + allowances
-    const sss = findSSS(basicPay)
-    const philhealthTotal = findPhilHealth(basicPay)
-    const pagibigAmt = findPagIBIG(basicPay)
-    const wht = findWHT(grossPay)
+// ─── payrollEngine ────────────────────────────────────────────────────────────
 
-    const totalDeductions = sss.employee + philhealthTotal + pagibigAmt + wht
+export const payrollEngine = {
+  calculateLine(
+    basicPay: number,
+    allowances: number,
+    thirteenthMonthAccrual: number = 0,
+    cumulativeAnnualBonus: number = 0,
+    extras: {
+      holidayPay?: number
+      overtimePay?: number
+      nightDifferential?: number
+      silMonetization?: number
+    } = {}
+  ): PayrollLineCalc {
+    const holidayPay = extras.holidayPay ?? 0
+    const overtimePay = extras.overtimePay ?? 0
+    const nightDifferential = extras.nightDifferential ?? 0
+    const silMonetization = extras.silMonetization ?? 0
+
+    const grossPay = basicPay + allowances + holidayPay + overtimePay + nightDifferential + silMonetization
+
+    // SSS 2024
+    const sss = computeSSS(basicPay)
+
+    // PhilHealth 2025
+    const ph = computePhilHealth(basicPay)
+
+    // Pag-IBIG (capped at PHP 100/side)
+    const pagibigAmt = computePagIBIG(basicPay)
+
+    // 13th month TRAIN Law: only taxable portion counts in WHT base
+    const taxableBonuses = Math.max(0, cumulativeAnnualBonus - THIRTEENTH_MONTH_EXEMPT_CEILING)
+    const nonTaxableBonuses = cumulativeAnnualBonus - taxableBonuses
+
+    // WHT base = gross pay + taxable bonus portion (monthly allocation)
+    const whtBase = grossPay + taxableBonuses
+    const wht = findWHT(whtBase)
+
+    const totalDeductions = sss.employee + ph.employee + pagibigAmt + wht
     const netPay = grossPay - totalDeductions
 
     return {
@@ -215,14 +239,21 @@ export const payrollEngine = {
       grossPay,
       sssEmployee: sss.employee,
       sssEmployer: sss.employer,
-      philhealthEmployee: philhealthTotal,
-      philhealthEmployer: philhealthTotal,
+      sssWisp: sss.wisp,
+      philhealthEmployee: ph.employee,
+      philhealthEmployer: ph.employer,
       pagibigEmployee: pagibigAmt,
       pagibigEmployer: pagibigAmt,
       withholdingTax: wht,
       totalDeductions,
       netPay,
       thirteenthMonthAccrual,
+      taxableBonuses,
+      nonTaxableBonuses,
+      holidayPay,
+      overtimePay,
+      nightDifferential,
+      silMonetization,
     }
   },
 
@@ -281,8 +312,9 @@ export const payrollEngine = {
       lineOrder: order++,
     })
 
-    // Debit: Employer contributions expense (employer shares above employee rates)
-    const employerContribExpense = totals.sssEmployer - totals.sssEmployee +
+    // Debit: Employer contributions expense
+    const employerContribExpense =
+      (totals.sssEmployer - totals.sssEmployee) +
       (totals.philhealthEmployer - totals.philhealthEmployee) +
       (totals.pagibigEmployer - totals.pagibigEmployee)
     if (employerContribExpense > 0) {

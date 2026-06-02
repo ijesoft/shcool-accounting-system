@@ -18,7 +18,7 @@ const protectedPaths = [
   "/admin",
 ]
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Redirect /dashboard to /

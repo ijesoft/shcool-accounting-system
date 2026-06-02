@@ -138,7 +138,7 @@ export const financialStatementEngine = {
     return result
   },
 
-  async cashFlowStatement(entitySchema: string, fromDate: string, toDate: string) {
+  async cashFlowStatement(entitySchema: string, fromDate: string, toDate: string, comparative: boolean = false) {
     const netIncome = await prisma.$queryRawUnsafe<any[]>(
       `SELECT COALESCE(SUM(
          CASE WHEN a.normal_balance = 'debit'
@@ -267,7 +267,7 @@ export const financialStatementEngine = {
     }
   },
 
-  async statementOfChangesInEquity(entitySchema: string, fromDate: string, toDate: string) {
+  async statementOfChangesInEquity(entitySchema: string, fromDate: string, toDate: string, comparative: boolean = false) {
     const beginningBalances = await prisma.$queryRawUnsafe<any[]>(
       `SELECT a.account_code, a.account_name,
               COALESCE(SUM(

@@ -3,6 +3,7 @@ import { getSession } from "@/lib/auth/session"
 import { hasPermission } from "@/lib/auth/rbac"
 import { redirect } from "next/navigation"
 import { prisma } from "@/lib/db"
+import { OfficialReceiptPrintWrapper } from "@/components/print/OfficialReceiptPrintWrapper"
 
 export const dynamic = "force-dynamic"
 
@@ -25,11 +26,31 @@ export default async function OfficialReceiptDetailPage({ params }: { params: Pr
   const or = rows[0]
   if (!or) return <p className="p-6 text-muted-foreground">Receipt not found.</p>
 
+  const settings = (entity.settings ?? {}) as any
+  const birSettings = settings?.bir ?? {}
+
+  const printProps = {
+    orNumber: or.or_number,
+    orDate: or.or_date instanceof Date ? or.or_date.toISOString().slice(0, 10) : String(or.or_date),
+    payorName: or.payor_name || "—",
+    sellerName: entity.name,
+    sellerTin: entity.tin || "",
+    sellerAddress: birSettings.businessAddress || "",
+    birSerialNumber: or.bir_serial_number || birSettings.birSerialNumber,
+    birPermitNumber: birSettings.birPermitNumber,
+    casPermitNumber: birSettings.casPermitNumber,
+    lines: [{ description: "Payment received", amount: Number(or.amount) }],
+    total: Number(or.amount),
+  }
+
   return (
     <div className="space-y-6 max-w-2xl">
-      <Link href="/official-receipts" className="text-sm text-blue-600 hover:underline">&larr; Back to Official Receipts</Link>
-      <h1 className="text-3xl font-bold">Official Receipt {or.or_number}</h1>
-      <div className="rounded-lg border bg-card p-6 space-y-4">
+      <div className="print:hidden flex items-center justify-between">
+        <Link href="/official-receipts" className="text-sm text-blue-600 hover:underline">&larr; Back to Official Receipts</Link>
+        <OfficialReceiptPrintWrapper printProps={printProps} />
+      </div>
+      <h1 className="text-3xl font-bold print:hidden">Official Receipt {or.or_number}</h1>
+      <div className="rounded-lg border bg-card p-6 space-y-4 print:hidden">
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div><span className="font-medium">OR Number:</span> {or.or_number}</div>
           <div><span className="font-medium">Date:</span> {new Date(or.or_date).toLocaleDateString()}</div>

@@ -24,6 +24,8 @@ export interface BirSerialRange {
 }
 
 export interface EntitySettings {
+  fiscalYearType?: 'calendar' | 'school_year'
+  schoolYearStartMonth?: number
   revenueRecognitionMethod?: RevenueRecognitionMethod
   bir?: {
     vatRegistrationStatus?: VatRegistrationStatus
@@ -32,6 +34,9 @@ export interface EntitySettings {
     vatRate?: number
     ewtRates?: EwtRateConfig[]
     serialRanges?: BirSerialRange[]
+    casPermitNumber?: string
+    casPermitDate?: string
+    casRegistrationNumber?: string
   }
 }
 
@@ -45,6 +50,8 @@ const DEFAULT_EWT_RATES: EwtRateConfig[] = [
 
 const DEFAULT_SETTINGS: EntitySettings = {
   revenueRecognitionMethod: "term_straight_line",
+  fiscalYearType: "calendar",
+  schoolYearStartMonth: 6,
   bir: {
     vatRegistrationStatus: "vat_exempt",
     vatRate: 12,
@@ -76,6 +83,12 @@ export async function updateEntitySettings(
   const current = await getEntitySettings(entityId)
 
   const merged: EntitySettings = { ...current }
+    if (patch.fiscalYearType !== undefined) {
+      merged.fiscalYearType = patch.fiscalYearType
+    }
+    if (patch.schoolYearStartMonth !== undefined) {
+      merged.schoolYearStartMonth = patch.schoolYearStartMonth
+    }
   if (patch.revenueRecognitionMethod !== undefined) {
     merged.revenueRecognitionMethod = patch.revenueRecognitionMethod
   }
