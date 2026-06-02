@@ -1142,7 +1142,7 @@ export async function migrateEntitySchema(schemaName: string): Promise<void> {
     UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '43000') WHERE account_code = '43100' AND parent_id IS NULL;
 
     -- Subledger party tagging (per JE line). subledger_type on account drives
-    -- which party picker is shown; party_type/party_id on je_line stores it.
+    -- which party picker is shown. party_type/party_id on je_line stores it.
     ALTER TABLE "${schemaName}".account
       ADD COLUMN IF NOT EXISTS subledger_type VARCHAR(20)
         CHECK (subledger_type IN ('student', 'vendor', 'employee') OR subledger_type IS NULL);
