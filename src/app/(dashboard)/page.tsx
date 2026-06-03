@@ -41,15 +41,15 @@ export default async function DashboardPage() {
     prisma.$queryRawUnsafe<any[]>(
       `SELECT
          COUNT(CASE WHEN due_date >= CURRENT_DATE THEN 1 END)::int as current_count,
-         COALESCE(SUM(CASE WHEN due_date >= CURRENT_DATE THEN balance_due ELSE 0 END), 0)::numeric as current_amount,
+         COALESCE(SUM(CASE WHEN due_date >= CURRENT_DATE THEN balance ELSE 0 END), 0)::numeric as current_amount,
          COUNT(CASE WHEN due_date < CURRENT_DATE AND due_date >= CURRENT_DATE - 30 THEN 1 END)::int as d30_count,
-         COALESCE(SUM(CASE WHEN due_date < CURRENT_DATE AND due_date >= CURRENT_DATE - 30 THEN balance_due ELSE 0 END), 0)::numeric as d30_amount,
+         COALESCE(SUM(CASE WHEN due_date < CURRENT_DATE AND due_date >= CURRENT_DATE - 30 THEN balance ELSE 0 END), 0)::numeric as d30_amount,
          COUNT(CASE WHEN due_date < CURRENT_DATE - 30 AND due_date >= CURRENT_DATE - 60 THEN 1 END)::int as d60_count,
-         COALESCE(SUM(CASE WHEN due_date < CURRENT_DATE - 30 AND due_date >= CURRENT_DATE - 60 THEN balance_due ELSE 0 END), 0)::numeric as d60_amount,
+         COALESCE(SUM(CASE WHEN due_date < CURRENT_DATE - 30 AND due_date >= CURRENT_DATE - 60 THEN balance ELSE 0 END), 0)::numeric as d60_amount,
          COUNT(CASE WHEN due_date < CURRENT_DATE - 60 THEN 1 END)::int as d61plus_count,
-         COALESCE(SUM(CASE WHEN due_date < CURRENT_DATE - 60 THEN balance_due ELSE 0 END), 0)::numeric as d61plus_amount
+         COALESCE(SUM(CASE WHEN due_date < CURRENT_DATE - 60 THEN balance ELSE 0 END), 0)::numeric as d61plus_amount
        FROM "${schema}".student_invoice
-       WHERE balance_due > 0`
+       WHERE balance > 0`
     ).catch(() => [{}]),
 
     prisma.$queryRawUnsafe<any[]>(

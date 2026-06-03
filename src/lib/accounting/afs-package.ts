@@ -92,19 +92,19 @@ export const afsPackageService = {
     // Note 3: AR Aging
     const arRows = await prisma.$queryRawUnsafe<any[]>(
       `SELECT
-         SUM(CASE WHEN due_date >= CURRENT_DATE THEN balance_due ELSE 0 END) as current_amount,
+         SUM(CASE WHEN due_date >= CURRENT_DATE THEN balance ELSE 0 END) as current_amount,
          COUNT(CASE WHEN due_date >= CURRENT_DATE THEN 1 END) as current_count,
-         SUM(CASE WHEN due_date < CURRENT_DATE AND due_date >= CURRENT_DATE - 30 THEN balance_due ELSE 0 END) as d30_amount,
+         SUM(CASE WHEN due_date < CURRENT_DATE AND due_date >= CURRENT_DATE - 30 THEN balance ELSE 0 END) as d30_amount,
          COUNT(CASE WHEN due_date < CURRENT_DATE AND due_date >= CURRENT_DATE - 30 THEN 1 END) as d30_count,
-         SUM(CASE WHEN due_date < CURRENT_DATE - 30 AND due_date >= CURRENT_DATE - 60 THEN balance_due ELSE 0 END) as d60_amount,
+         SUM(CASE WHEN due_date < CURRENT_DATE - 30 AND due_date >= CURRENT_DATE - 60 THEN balance ELSE 0 END) as d60_amount,
          COUNT(CASE WHEN due_date < CURRENT_DATE - 30 AND due_date >= CURRENT_DATE - 60 THEN 1 END) as d60_count,
-         SUM(CASE WHEN due_date < CURRENT_DATE - 60 AND due_date >= CURRENT_DATE - 90 THEN balance_due ELSE 0 END) as d90_amount,
+         SUM(CASE WHEN due_date < CURRENT_DATE - 60 AND due_date >= CURRENT_DATE - 90 THEN balance ELSE 0 END) as d90_amount,
          COUNT(CASE WHEN due_date < CURRENT_DATE - 60 AND due_date >= CURRENT_DATE - 90 THEN 1 END) as d90_count,
-         SUM(CASE WHEN due_date < CURRENT_DATE - 90 THEN balance_due ELSE 0 END) as d91plus_amount,
+         SUM(CASE WHEN due_date < CURRENT_DATE - 90 THEN balance ELSE 0 END) as d91plus_amount,
          COUNT(CASE WHEN due_date < CURRENT_DATE - 90 THEN 1 END) as d91plus_count,
-         SUM(balance_due) as total_ar
+         SUM(balance) as total_ar
        FROM "${entitySchema}".student_invoice
-       WHERE balance_due > 0`
+       WHERE balance > 0`
     ).catch(() => [] as any[])
 
     const ar = arRows[0] ?? {}
