@@ -111,6 +111,53 @@ export const payrollService = {
     return rows[0] || null
   },
 
+
+  async upsertByEmployeeCode(
+    entitySchema: string,
+    userId: string,
+    data: {
+      employeeCode: string
+      fullName: string
+      position?: string
+      department?: string
+      basicPay?: number
+      tin?: string
+      sssNumber?: string
+      philhealthNumber?: string
+      pagibigNumber?: string
+      isActive?: boolean
+    }
+  ) {
+    const rows = await prisma.$queryRawUnsafe<any[]>(
+      `SELECT id FROM "${entitySchema}".employee WHERE employee_code = $1 LIMIT 1`,
+      data.employeeCode
+    )
+    const payload = {
+      fullName: data.fullName,
+      position: data.position,
+      department: data.department,
+      basicPay: data.basicPay ?? 0,
+      tin: data.tin,
+      sssNumber: data.sssNumber,
+      philhealthNumber: data.philhealthNumber,
+      pagibigNumber: data.pagibigNumber,
+      isActive: data.isActive ?? true,
+    }
+    if (rows[0]?.id) {
+      return this.updateEmployee(entitySchema, userId, rows[0].id, payload)
+    }
+    return this.createEmployee(entitySchema, userId, {
+      employeeCode: data.employeeCode,
+      fullName: data.fullName,
+      position: data.position,
+      department: data.department,
+      tin: data.tin,
+      sssNumber: data.sssNumber,
+      philhealthNumber: data.philhealthNumber,
+      pagibigNumber: data.pagibigNumber,
+      basicPay: data.basicPay ?? 0,
+    })
+  },
   // --- Payroll Run ---
 
   async listPayRuns(entitySchema: string, opts?: { q?: string; page?: number; limit?: number }) {

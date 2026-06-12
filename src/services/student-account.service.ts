@@ -145,6 +145,63 @@ export const studentAccountService = {
     )
   },
 
+
+  async getByStudentNumber(entitySchema: string, studentNumber: string) {
+    const rows = await prisma.$queryRawUnsafe<any[]>(
+      `SELECT * FROM "${entitySchema}".student WHERE student_number = $1 LIMIT 1`,
+      studentNumber
+    )
+    return rows[0] || null
+  },
+
+  async upsertByStudentNumber(
+    entitySchema: string,
+    data: { studentNumber: string; fullName: string; course?: string; gradeLevel?: string; status?: string }
+  ) {
+    const existing = await this.getByStudentNumber(entitySchema, data.studentNumber)
+    if (existing) {
+      return this.update(entitySchema, existing.id, {
+        fullName: data.fullName,
+        course: data.course,
+        gradeLevel: data.gradeLevel,
+        status: data.status || existing.status || "enrolled",
+      })
+    }
+    return this.create(entitySchema, {
+      studentNumber: data.studentNumber,
+      fullName: data.fullName,
+      course: data.course,
+      gradeLevel: data.gradeLevel,
+      status: data.status || "enrolled",
+    })
+  },
+
+  async getInvoiceByReference(entitySchema: string, reference: string) {
+    const rows = await prisma.$queryRawUnsafe<any[]>(
+      `SELECT id, invoice_number, student_id, term, invoice_date, due_date, total_amount, balance, status
+       FROM "${entitySchema}".student_invoice WHERE term = $1 LIMIT 1`,
+      reference
+    )
+    return rows[0] || null
+  },
+
+  async getAgingByStudentNumber(entitySchema: string, studentNumber: string) {
+    const rows = await prisma.$queryRawUnsafe<any[]>(
+      `SELECT s.id, s.student_number, s.full_name,
+              COALESCE(SUM(CASE WHEN si.due_date >= CURRENT_DATE THEN si.balance ELSE 0 END), 0) as current,
+              COALESCE(SUM(CASE WHEN si.due_date BETWEEN CURRENT_DATE - 30 AND CURRENT_DATE - 1 THEN si.balance ELSE 0 END), 0) as days_1_30,
+              COALESCE(SUM(CASE WHEN si.due_date BETWEEN CURRENT_DATE - 60 AND CURRENT_DATE - 31 THEN si.balance ELSE 0 END), 0) as days_31_60,
+              COALESCE(SUM(CASE WHEN si.due_date BETWEEN CURRENT_DATE - 90 AND CURRENT_DATE - 61 THEN si.balance ELSE 0 END), 0) as days_61_90,
+              COALESCE(SUM(CASE WHEN si.due_date < CURRENT_DATE - 90 THEN si.balance ELSE 0 END), 0) as days_91_plus,
+              COALESCE(SUM(si.balance), 0) as total_balance
+       FROM "${entitySchema}".student s
+       LEFT JOIN "${entitySchema}".student_invoice si ON si.student_id = s.id AND si.status IN ('unpaid', 'partial')
+       WHERE s.student_number = $1
+       GROUP BY s.id, s.student_number, s.full_name`,
+      studentNumber
+    )
+    return rows[0] || null
+  },
   async getAging(entitySchema: string) {
     return prisma.$queryRawUnsafe<any[]>(
       `SELECT s.id, s.student_number, s.full_name,
