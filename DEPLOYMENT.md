@@ -1,237 +1,168 @@
-# Deployment Guide — School Accounting System
+# Deployment Guide
 
 ## Prerequisites
 
-- **Ubuntu 24.04** (or similar Debian-based distro)
-- **Node.js 20+** (via nvm or NodeSource)
-- **PostgreSQL 16+**
-- **Git**
+- Docker & Docker Compose
+- Node.js 20+ & npm
+- PM2 (`npm i -g pm2`)
+- OpenVPN client connected to `10.8.0.0/24` network
 
----
+## Architecture
 
-## 1. Install Node.js
-
-```bash
-# Install nvm
-curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
-source ~/.bashrc
-
-# Install Node.js 20 LTS
-nvm install 20
-nvm use 20
-nvm alias default 20
+```
+nginx (10.8.0.1) → school-accounting (10.8.0.2:3002)
+                         ↓
+                    PostgreSQL (localhost:5440, docker)
 ```
 
-## 2. Install PostgreSQL
+## 1. PostgreSQL (Docker)
 
 ```bash
-sudo apt update
-sudo apt install -y postgresql postgresql-contrib
-
-# Start and enable PostgreSQL
-sudo systemctl start postgresql
-sudo systemctl enable postgresql
-
-# Set postgres password
-sudo -u postgres psql -c "ALTER USER postgres PASSWORD 'postgres';"
+# Start the database container
+cd /home/ubuntu/Github/shcool-accounting-system/docker
+docker compose up -d db
 ```
 
-## 3. Clone the Repository
+The database runs on `localhost:5440` with the following credentials:
+
+| Setting     | Value                    |
+| ----------- | ------------------------ |
+| Host        | localhost                |
+| Port        | 5440                     |
+| Database    | school_accounting        |
+| User        | postgres                 |
+| Password    | postgres                 |
+
+## 2. Run Migrations
 
 ```bash
-cd /opt
-sudo git clone https://github.com/ijesoft/shcool-accounting-system.git
-sudo chown -R $(whoami):$(whoami) shcool-accounting-system
-cd shcool-accounting-system
+# Run Prisma migrations
+cd /home/ubuntu/Github/shcool-accounting-system
+npx prisma db push --schema prisma/schema.prisma
 ```
 
-## 4. Install Dependencies
+Or use the Docker migration service:
 
 ```bash
-npm ci --production
+cd /home/ubuntu/Github/shcool-accounting-system/docker
+docker compose up migrate
 ```
 
-## 5. Configure Environment
+## 3. Next.js App (PM2)
+
+The PM2 ecosystem config is at `ecosystem.config.js` with the following environment variables:
+
+| Variable         | Value                                                              |
+| ---------------- | ------------------------------------------------------------------ |
+| DATABASE_URL     | postgresql://postgres:postgres@localhost:5440/school_accounting?schema=public |
+| SESSION_SECRET   | school-accounting-secret-key-32chars                               |
+| NODE_ENV         | production                                                         |
+
+### Start the app
 
 ```bash
-cp .env.example .env
+cd /home/ubuntu/Github/shcool-accounting-system
+pm2 start ecosystem.config.js
 ```
 
-Edit `.env`:
-
-```env
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/school_accounting?schema=public"
-REDIS_URL="redis://localhost:6379"
-SESSION_SECRET="<generate-a-random-32-char-string>"
-NEXT_PUBLIC_APP_NAME="School Accounting System"
-NEXT_PUBLIC_APP_URL="http://your-domain.com"
-DB_PASSWORD=postgres
-```
-
-Generate a secure session secret:
+### Save process list (survives reboot)
 
 ```bash
-openssl rand -base64 32
-```
-
-## 6. Set Up Database
-
-```bash
-# Create database
-sudo -u postgres psql -c "CREATE DATABASE school_accounting;"
-
-# Generate Prisma client
-npx prisma generate
-
-# Push schema to database
-npx prisma db push
-
-# Seed database (creates roles, permissions, entities, admin user)
-npx tsx scripts/seed.ts
-```
-
-## 7. Build the Application
-
-```bash
-npm run build
-```
-
-## 8. Install PM2
-
-```bash
-sudo npm install -g pm2
-
-# Start the app with PM2
-pm2 start npm --name "school-accounting" -- start
-
-# Save PM2 process list (survives reboots)
 pm2 save
+```
 
-# Setup PM2 to start on boot
+### Setup PM2 auto-start on boot
+
+```bash
 pm2 startup
+# Follow the command output to enable the systemd service
 ```
 
-## 9. Verify Deployment
+### PM2 commands
 
 ```bash
-# Check PM2 status
-pm2 status
-pm2 logs school-accounting
-
-# Test the app
-curl http://localhost:3000/api/v1/health 2>/dev/null || \
-curl http://localhost:3000
+pm2 status school-accounting    # Check status
+pm2 logs school-accounting      # View logs
+pm2 restart school-accounting   # Restart
+pm2 stop school-accounting      # Stop
 ```
 
-## 10. (Optional) Set Up Reverse Proxy with Nginx
+## 4. Firewall
+
+Allow nginx proxy access from `10.8.0.1`:
 
 ```bash
-sudo apt install -y nginx
+sudo ufw allow from 10.8.0.1 to any port 3002 comment "demo.ijesoft.app from jerome nginx proxy"
+```
 
-sudo tee /etc/nginx/sites-available/school-accounting <<EOF
+## 5. Nginx Config (on 10.8.0.1)
+
+```nginx
 server {
-    listen 80;
-    server_name your-domain.com;
+    listen 443 ssl;
+    http2 on;
+    server_name demo.ijesoft.app;
+
+    ssl_certificate     /etc/letsencrypt/live/demo.ijesoft.app/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/demo.ijesoft.app/privkey.pem;
+    include             /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam         /etc/letsencrypt/ssl-dhparams.pem;
+
+    client_max_body_size 50M;
 
     location / {
-        proxy_pass http://localhost:3000;
+        proxy_pass         http://10.8.0.2:3002;
         proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-        proxy_cache_bypass \$http_upgrade;
+        proxy_set_header   Host              $http_host;
+        proxy_set_header   X-Real-IP         $remote_addr;
+        proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+        proxy_set_header   Upgrade           $http_upgrade;
+        proxy_set_header   Connection        upgrade;
+        proxy_cache_bypass $http_upgrade;
+        proxy_read_timeout 300;
     }
 }
-EOF
-
-sudo ln -s /etc/nginx/sites-available/school-accounting /etc/nginx/sites-enabled/
-sudo systemctl restart nginx
 ```
 
-## 11. (Optional) Set Up SSL with Let's Encrypt
+## 6. OpenVPN
+
+Connect to the OpenVPN network so the nginx server can reach this machine:
 
 ```bash
-sudo apt install -y certbot python3-certbot-nginx
-sudo certbot --nginx -d your-domain.com
+sudo openvpn --config /home/ubuntu/isaac-server.ovpn
 ```
 
----
+This machine gets IP `10.8.0.2` on the `10.8.0.0/24` network.
 
-## PM2 Commands Reference
+## Full Start Sequence
 
 ```bash
-# View status
-pm2 status
+# 1. Connect OpenVPN
+sudo openvpn --config /home/ubuntu/isaac-server.ovpn
 
-# View logs
-pm2 logs school-accounting
+# 2. Start PostgreSQL
+cd /home/ubuntu/Github/shcool-accounting-system/docker
+docker compose up -d db
 
-# Restart
-pm2 restart school-accounting
+# 3. Run migrations
+cd /home/ubuntu/Github/shcool-accounting-system
+npx prisma db push
 
-# Stop
-pm2 stop school-accounting
+# 4. Start Next.js app
+pm2 start ecosystem.config.js
 
-# Delete from PM2
-pm2 delete school-accounting
+# 5. Allow firewall rule (one-time)
+sudo ufw allow from 10.8.0.1 to any port 3002 comment "demo.ijesoft.app from jerome nginx proxy"
 
-# Monitor
-pm2 monit
-
-# Show app info
-pm2 info school-accounting
+# 6. Save PM2
+pm2 save
 ```
 
----
-
-## Default Login
-
-- **Email:** admin@school.edu
-- **Password:** admin123
-
----
-
-## Troubleshooting
-
-### PostgreSQL not running
+## Verify
 
 ```bash
-sudo systemctl start postgresql
-sudo systemctl enable postgresql
-```
-
-### Build fails — out of memory
-
-```bash
-# Increase Node.js memory
-NODE_OPTIONS="--max-old-space-size=4096" npm run build
-```
-
-### PM2 app crashes on start
-
-```bash
-# Check logs for errors
-pm2 logs school-accounting --lines 100
-
-# Common issues:
-# - DATABASE_URL incorrect
-# - Missing database
-# - SESSION_SECRET too short
-```
-
-### Port 3000 already in use
-
-```bash
-# Find what's using port 3000
-sudo lsof -i :3000
-
-# Kill the process
-sudo kill -9 <PID>
-
-# Or change the port in .env:
-# NEXT_PUBLIC_APP_URL="http://localhost:3001"
-# And start with: pm2 start npm --name "school-accounting" -- start -- -p 3001
+# Check app is running
+curl -sI https://demo.ijesoft.app/
+# Expected: HTTP/2 307 → /login
 ```

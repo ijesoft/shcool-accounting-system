@@ -49,7 +49,7 @@ export default async function FixedAssetDetailPage({ params }: { params: Promise
           </div>
           <div>
             <p className="text-sm text-muted-foreground">Net Book Value</p>
-            <p className="font-mono">{(Number(asset.acquisition_cost) - formatAmount(Number(asset.accumulated_depreciation)))}</p>
+            <p className="font-mono">{formatAmount(Number(asset.acquisition_cost) - Number(asset.accumulated_depreciation))}</p>
           </div>
           <div>
             <p className="text-sm text-muted-foreground">Life (Years)</p>
