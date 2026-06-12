@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
-const publicPaths = ["/api/v1/auth/login", "/login"]
+// /api/v1/auth/sso is token-validated and /api/v1/integration/* is
+// API-key-validated inside their route handlers (see lib/auth/service-auth.ts),
+// so they bypass the session-cookie gate here.
+const publicPaths = ["/api/v1/auth/login", "/api/v1/auth/sso", "/api/v1/integration/", "/login"]
 
 const protectedPaths = [
   "/",
