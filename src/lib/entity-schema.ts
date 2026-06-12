@@ -661,6 +661,7 @@ export async function createEntitySchema(schemaName: string): Promise<void> {
       ('41110', 'Tuition - College', 'revenue', 'credit', 3),
       ('41120', 'Tuition - Senior High School', 'revenue', 'credit', 3),
       ('41130', 'Tuition - Junior High School', 'revenue', 'credit', 3),
+      ('41190', 'Tuition - General', 'revenue', 'credit', 3),
       ('41200', 'Tuition Revenue - Extension', 'revenue', 'credit', 2),
       ('41300', 'Tuition Revenue - Summer', 'revenue', 'credit', 2),
       ('41400', 'Tuition Revenue - Online', 'revenue', 'credit', 2),
@@ -668,11 +669,13 @@ export async function createEntitySchema(schemaName: string): Promise<void> {
       -- Operating Revenue - Fees
       ('42000', 'Fee Revenue', 'revenue', 'credit', 1),
       ('42100', 'Laboratory Fees', 'revenue', 'credit', 2),
+      ('42110', 'Laboratory Fees - General', 'revenue', 'credit', 3),
       ('42200', 'Library Fees', 'revenue', 'credit', 2),
       ('42300', 'Registration Fees', 'revenue', 'credit', 2),
       ('42400', 'Examination Fees', 'revenue', 'credit', 2),
       ('42500', 'Graduation Fees', 'revenue', 'credit', 2),
       ('42600', 'Miscellaneous Fees', 'revenue', 'credit', 2),
+      ('42610', 'Miscellaneous Fees - General', 'revenue', 'credit', 3),
 
       -- Operating Revenue - Other
       ('43000', 'Other Operating Revenue', 'revenue', 'credit', 1),
@@ -902,8 +905,10 @@ export async function createEntitySchema(schemaName: string): Promise<void> {
 
     UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '40000') WHERE account_code IN ('41000', '42000', '43000', '44000');
     UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '41000') WHERE account_code IN ('41100', '41200', '41300', '41400');
-    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '41100') WHERE account_code IN ('41110', '41120', '41130');
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '41100') WHERE account_code IN ('41110', '41120', '41130', '41190');
     UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '42000') WHERE account_code IN ('42100', '42200', '42300', '42400', '42500', '42600');
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '42100') WHERE account_code = '42110';
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '42600') WHERE account_code = '42610';
     UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '43000') WHERE account_code IN ('43100', '43200', '43300', '43400', '43500', '43600', '43700');
     UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '44000') WHERE account_code IN ('44100', '44200', '44300', '44400', '44500');
     UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '44100') WHERE account_code IN ('44110', '44120', '44130', '44140');
@@ -1133,13 +1138,19 @@ export async function migrateEntitySchema(schemaName: string): Promise<void> {
       ('42100', 'Laboratory Fees', 'revenue', 'credit', 2),
       ('42600', 'Miscellaneous Fees', 'revenue', 'credit', 2),
       ('43000', 'Other Operating Revenue', 'revenue', 'credit', 1),
-      ('43100', 'Canteen Revenue', 'revenue', 'credit', 2)
+      ('43100', 'Canteen Revenue', 'revenue', 'credit', 2),
+      ('41190', 'Tuition - General', 'revenue', 'credit', 3),
+      ('42110', 'Laboratory Fees - General', 'revenue', 'credit', 3),
+      ('42610', 'Miscellaneous Fees - General', 'revenue', 'credit', 3)
     ON CONFLICT (account_code) DO NOTHING;
 
     UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '21300') WHERE account_code = '21310' AND parent_id IS NULL;
     UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '21400') WHERE account_code = '21410' AND parent_id IS NULL;
     UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '42000') WHERE account_code IN ('42100','42600') AND parent_id IS NULL;
     UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '43000') WHERE account_code = '43100' AND parent_id IS NULL;
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '41100') WHERE account_code = '41190' AND parent_id IS NULL;
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '42100') WHERE account_code = '42110' AND parent_id IS NULL;
+    UPDATE "${schemaName}".account SET parent_id = (SELECT id FROM "${schemaName}".account WHERE account_code = '42600') WHERE account_code = '42610' AND parent_id IS NULL;
 
     -- Subledger party tagging (per JE line). subledger_type on account drives
     -- which party picker is shown. party_type/party_id on je_line stores it.

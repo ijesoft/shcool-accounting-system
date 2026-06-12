@@ -54,7 +54,7 @@ export const studentAccountService = {
     if (data.status !== undefined) { sets.push(`status = $${i}`); vals.push(data.status); i++ }
     vals.push(id)
     return prisma.$queryRawUnsafe<any[]>(
-      `UPDATE "${entitySchema}".student SET ${sets.join(", ")}, updated_at = NOW() WHERE id = $${i} RETURNING *`,
+      `UPDATE "${entitySchema}".student SET ${sets.join(", ")}, updated_at = NOW() WHERE id = $${i}::uuid RETURNING *`,
       ...vals
     ).then(r => r[0])
   },
@@ -181,6 +181,18 @@ export const studentAccountService = {
       `SELECT id, invoice_number, student_id, term, invoice_date, due_date, total_amount, balance, status
        FROM "${entitySchema}".student_invoice WHERE term = $1 LIMIT 1`,
       reference
+    )
+    return rows[0] || null
+  },
+
+  // Idempotency key for integration billing: one open invoice per student per
+  // term. Lets `term` hold the human-readable label instead of a sync reference.
+  async getInvoiceByStudentAndTerm(entitySchema: string, studentId: string, term: string) {
+    const rows = await prisma.$queryRawUnsafe<any[]>(
+      `SELECT id, invoice_number, student_id, term, invoice_date, due_date, total_amount, balance, status
+       FROM "${entitySchema}".student_invoice
+       WHERE student_id = $1::uuid AND term = $2 AND status != 'cancelled' LIMIT 1`,
+      studentId, term
     )
     return rows[0] || null
   },

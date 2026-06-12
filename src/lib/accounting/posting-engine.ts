@@ -138,11 +138,13 @@ export const postingEngine = {
       return { success: false, errors: [{ code: "ERR_ENTRY_NOT_POSTED", message: "Can only reverse a posted entry" }] }
     }
 
-    // Create reversing lines (swap debits and credits)
+    // Create reversing lines (swap debits and credits). DECIMAL columns come
+    // back from the raw query as strings — coerce or the balance validation
+    // in post() concatenates instead of summing.
     const reversedLines = lines.map((l: any) => ({
       accountId: l.account_id,
-      debit: l.credit,
-      credit: l.debit,
+      debit: Number(l.credit),
+      credit: Number(l.debit),
       lineDescription: `Reversing: ${l.line_description || ''}`,
       lineOrder: l.line_order,
     }))
@@ -173,17 +175,21 @@ export const postingEngine = {
       `UPDATE "${entitySchema}".number_series SET next_number = next_number + 1 WHERE series_type = 'JE'`
     )
 
-    // Mark original as void
-    await prisma.$queryRawUnsafe(
-      `UPDATE "${entitySchema}".journal_entry SET status = 'void', updated_at = NOW() WHERE id = $1::uuid`,
-      originalEntryId
-    )
-
-    // Auto-post the reversing entry
+    // Auto-post the reversing entry first; only void the original once the
+    // reversal is in the GL. Voiding first leaves an unreversable entry if
+    // posting fails (no transaction spans these statements).
     const postResult = await this.post(
       entitySchema, newEntry[0].id, userId,
       newEntry[0].entry_date.toISOString().split('T')[0],
       reversedLines
+    )
+    if (!postResult.success) {
+      return postResult
+    }
+
+    await prisma.$queryRawUnsafe(
+      `UPDATE "${entitySchema}".journal_entry SET status = 'void', updated_at = NOW() WHERE id = $1::uuid`,
+      originalEntryId
     )
 
     return postResult

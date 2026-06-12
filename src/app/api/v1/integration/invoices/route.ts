@@ -3,6 +3,7 @@ import { z } from "zod"
 import { formatApiError, formatApiResponse } from "@/lib/utils"
 import { verifyServiceKey, resolveServiceSchema, getServiceUserId } from "@/lib/auth/service-auth"
 import { studentAccountService } from "@/services/student-account.service"
+import { prisma } from "@/lib/db"
 
 const invoiceLineSchema = z.object({
   feeType: z.string().min(1).max(100),
@@ -40,29 +41,33 @@ export async function POST(request: NextRequest) {
     }
     const data = parsed.data
 
-    const existing = await studentAccountService.getInvoiceByReference(schema, data.reference)
-    if (existing) {
-      return NextResponse.json(formatApiResponse({ ...existing, replay: true }))
-    }
-
     const student = await studentAccountService.getByStudentNumber(schema, data.studentNumber)
     if (!student) {
       return NextResponse.json(formatApiError("ERR_NOT_FOUND", "Student not found — sync student first"), { status: 404 })
     }
 
+    // One open invoice per student per term; `term` keeps the human-readable
+    // label (the el-school reference encodes the same student+session pair).
+    const existing = await studentAccountService.getInvoiceByStudentAndTerm(schema, student.id, data.term)
+    if (existing) {
+      return NextResponse.json(formatApiResponse({ ...existing, invoiceNumber: existing.invoice_number, replay: true }))
+    }
+
     const totalAmount = data.lines.reduce((sum, line) => sum + line.amount - (line.discountAmount ?? 0), 0)
+    const entity = await prisma.entity.findFirst({ where: { schemaName: schema } })
     const invoice = await studentAccountService.createInvoice(schema, userId, {
       studentId: student.id,
       invoiceDate: data.invoiceDate,
       dueDate: data.dueDate,
       totalAmount,
-      term: data.reference,
+      term: data.term,
       termStartDate: data.termStartDate,
       termEndDate: data.termEndDate,
+      entityId: entity?.id,
       lines: data.lines,
     })
 
-    return NextResponse.json(formatApiResponse({ ...invoice, termLabel: data.term, replay: false }), { status: 201 })
+    return NextResponse.json(formatApiResponse({ ...invoice, invoiceNumber: invoice.invoice_number, replay: false }), { status: 201 })
   } catch (error) {
     console.error("Integration invoice error:", error)
     return NextResponse.json(formatApiError("ERR_INTERNAL", "Failed to create invoice"), { status: 500 })

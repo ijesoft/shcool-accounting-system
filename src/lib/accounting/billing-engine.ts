@@ -7,7 +7,11 @@ import { vatEngine } from "@/lib/accounting/vat-engine"
 
 const AR_ACCOUNT_CODE = "11210"
 const UNEARNED_TUITION_CODE = "21310"
-const TUITION_REVENUE_CODE = "41100"
+// Posting requires level-3 leaf accounts; the level-2 headers (41100, 42100,
+// 42600) are rejected by the posting engine.
+const TUITION_REVENUE_CODE = "41190"
+const LAB_FEES_CODE = "42110"
+const MISC_FEES_CODE = "42610"
 const OUTPUT_VAT_CODE = "21410"
 
 export interface BillingLine {
@@ -20,31 +24,22 @@ function normalizeFeeType(feeType: string): string {
   return feeType.trim().toLowerCase().replace(/\s+/g, "_")
 }
 
+// Substring matching so real-world labels ("Tuition Fee", "Miscellaneous
+// Fees", "Lab Fee") classify the same as the bare keywords.
 function getCreditAccountCode(feeType: string, method: RevenueRecognitionMethod): string {
   const key = normalizeFeeType(feeType)
+  const isLab = key.includes("lab")
+  const isMisc = key.includes("misc") || key.includes("other")
+
+  if (isLab) return LAB_FEES_CODE
+  if (isMisc) return MISC_FEES_CODE
 
   if (method === "immediate") {
-    const immediateMap: Record<string, string> = {
-      tuition: TUITION_REVENUE_CODE,
-      misc: "42600",
-      miscellaneous: "42600",
-      laboratory: "42100",
-      lab: "42100",
-      other: "43100",
-    }
-    return immediateMap[key] ?? TUITION_REVENUE_CODE
+    return TUITION_REVENUE_CODE
   }
-
-  const deferredMap: Record<string, string> = {
-      tuition: UNEARNED_TUITION_CODE,
-      registration: UNEARNED_TUITION_CODE,
-      misc: "42600",
-      miscellaneous: "42600",
-      laboratory: "42100",
-      lab: "42100",
-      other: "43100",
-    }
-  return deferredMap[key] ?? UNEARNED_TUITION_CODE
+  // Deferred methods: tuition-like and unknown fee types accrue to unearned
+  // tuition and are recognized over the term.
+  return UNEARNED_TUITION_CODE
 }
 
 async function getAccountId(entitySchema: string, accountCode: string): Promise<string> {
@@ -217,7 +212,7 @@ export const billingEngine = {
 
   async reverseStudentInvoice(entitySchema: string, userId: string, invoiceId: string) {
     const rows = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT journal_entry_id, status FROM "${entitySchema}".student_invoice WHERE id = $1`,
+      `SELECT journal_entry_id, status FROM "${entitySchema}".student_invoice WHERE id = $1::uuid`,
       invoiceId
     )
     const invoice = rows[0]
@@ -234,12 +229,12 @@ export const billingEngine = {
     }
 
     await prisma.$queryRawUnsafe(
-      `UPDATE "${entitySchema}".student_invoice SET status = 'cancelled', balance = 0, updated_at = NOW() WHERE id = $1`,
+      `UPDATE "${entitySchema}".student_invoice SET status = 'cancelled', balance = 0, updated_at = NOW() WHERE id = $1::uuid`,
       invoiceId
     )
 
     await prisma.$queryRawUnsafe(
-      `DELETE FROM "${entitySchema}".revenue_recognition_entry WHERE student_invoice_id = $1`,
+      `DELETE FROM "${entitySchema}".revenue_recognition_entry WHERE student_invoice_id = $1::uuid`,
       invoiceId
     )
 

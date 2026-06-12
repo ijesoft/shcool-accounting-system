@@ -41,5 +41,13 @@ export async function GET(request: NextRequest) {
   session.isActive = true
   await session.save()
 
+  // PUBLIC_APP_URL is the browser-facing URL of this app (e.g.
+  // https://school.example/accounting when served behind a path-prefix
+  // proxy). Header sniffing is unreliable here because Next.js synthesizes
+  // x-forwarded-host even for direct requests.
+  const publicUrl = process.env.PUBLIC_APP_URL
+  if (publicUrl) {
+    return NextResponse.redirect(publicUrl.endsWith("/") ? publicUrl : `${publicUrl}/`)
+  }
   return NextResponse.redirect(new URL("/", request.url))
 }
